@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import SeriesCard from './SeriesCard';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
@@ -24,6 +25,7 @@ const BrowseSeries: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [localSearch, setLocalSearch] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadSeriesCategories();
@@ -48,8 +50,9 @@ const BrowseSeries: React.FC = () => {
     setPage(1); // reset page on category change
   };
 
-  const handleSelect = (seriesItem) => {
+  const handleSelectSeries = (seriesItem) => {
     selectSeries(seriesItem);
+    navigate(`/series/${seriesItem.series_id}`);
   };
 
   const handleDownload = (seriesItem) => {
@@ -185,7 +188,7 @@ const BrowseSeries: React.FC = () => {
                 <SeriesCard
                   key={seriesItem.series_id}
                   series={seriesItem}
-                  onSelect={handleSelect}
+                  onSelect={handleSelectSeries}
                   onDownload={handleDownload}
                 />
               ))}

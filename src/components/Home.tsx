@@ -1,28 +1,28 @@
 import React, { useEffect, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Link } from 'react-router-dom';
-import { Play, TrendingUp, Star, Clock } from 'lucide-react';
+import { TrendingUp, Star, Clock } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import MovieCard from './MovieCard';
+import SeriesCard from './SeriesCard';
 
 const Home: React.FC = () => {
   const { 
     movies, 
     series, 
     loadMovies, 
-    loadSeries, 
-    selectMovie, 
+    loadSeries,
     selectSeries,
     isLoading 
   } = useAppStore();
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
-    if (!movies || movies.length === 0) {
-      loadMovies();
-    }
-    if (!series || series.length === 0) {
-      loadSeries();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+    loadMovies();
+    loadSeries();
+  }, [loadMovies, loadSeries]);
 
   const featuredMovies = useMemo(
     () => (movies || []).slice(0, 6),
@@ -40,6 +40,16 @@ const Home: React.FC = () => {
         .slice(0, 8),
     [movies]
   );
+
+  const handleSelectSeries = (seriesItem) => {
+	  selectSeries(seriesItem);
+    navigate(`/series/${seriesItem.series_id}`);
+  };
+
+  const handlePlayMovie = (movie) => {
+    // Open overlay, keep Home as background
+    navigate(`/movies/${movie.stream_id}`, { state: { backgroundLocation: location.pathname } });
+  };
 
   return (
     <div className="p-6 space-y-8">
@@ -92,43 +102,12 @@ const Home: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {featuredMovies.map((movie) => (
-              <div
+              <MovieCard
                 key={movie.stream_id}
-                className="group relative bg-dark-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300 cursor-pointer"
-                onClick={() => selectMovie(movie)}
-              >
-                <div className="aspect-[2/3] relative">
-                  {movie.stream_icon ? (
-                    <img
-                      src={movie.stream_icon}
-                      alt={movie.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-dark-700 flex items-center justify-center">
-                      <Play className="w-12 h-12 text-dark-400" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <Play className="w-12 h-12 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="text-white font-semibold text-sm line-clamp-2">
-                    {movie.name}
-                  </h3>
-                  {movie.rating_5based > 0 && (
-                    <div className="flex items-center mt-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
-                      <span className="text-xs text-dark-300">
-                        {movie.rating_5based.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                movie={movie}
+                onPlay={handlePlayMovie}
+                onDownload={() => {}}
+              />
             ))}
           </div>
         )}
@@ -158,43 +137,12 @@ const Home: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {featuredSeries.map((series) => (
-              <div
+              <SeriesCard
                 key={series.series_id}
-                className="group relative bg-dark-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300 cursor-pointer"
-                onClick={() => selectSeries(series)}
-              >
-                <div className="aspect-[2/3] relative">
-                  {series.cover ? (
-                    <img
-                      src={series.cover}
-                      alt={series.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-dark-700 flex items-center justify-center">
-                      <Play className="w-12 h-12 text-dark-400" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <Play className="w-12 h-12 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="text-white font-semibold text-sm line-clamp-2">
-                    {series.name}
-                  </h3>
-                  {series.rating_5based > 0 && (
-                    <div className="flex items-center mt-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
-                      <span className="text-xs text-dark-300">
-                        {series.rating_5based.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                series={series}
+                onSelect={handleSelectSeries}
+                onDownload={() => {}}
+              />
             ))}
           </div>
         )}
@@ -224,35 +172,12 @@ const Home: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             {recentMovies.map((movie) => (
-              <div
+              <MovieCard
                 key={movie.stream_id}
-                className="group relative bg-dark-800 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300 cursor-pointer"
-                onClick={() => selectMovie(movie)}
-              >
-                <div className="aspect-[2/3] relative">
-                  {movie.stream_icon ? (
-                    <img
-                      src={movie.stream_icon}
-                      alt={movie.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-dark-700 flex items-center justify-center">
-                      <Play className="w-8 h-8 text-dark-400" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <Play className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-2">
-                  <h3 className="text-white font-medium text-xs line-clamp-2">
-                    {movie.name}
-                  </h3>
-                </div>
-              </div>
+                movie={movie}
+                onPlay={handlePlayMovie}
+                onDownload={() => {}}
+              />
             ))}
           </div>
         )}

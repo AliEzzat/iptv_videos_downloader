@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import MovieCard from './MovieCard';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const PAGE_SIZE = 30;
 
@@ -25,6 +26,8 @@ const BrowseMovies: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [localSearch, setLocalSearch] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     loadMovieCategories();
@@ -51,6 +54,7 @@ const BrowseMovies: React.FC = () => {
 
   const handlePlay = (movie) => {
     selectMovie(movie);
+    navigate(`/movies/${movie.stream_id}`, { state: { backgroundLocation: location.pathname } });
   };
 
   const handleDownload = (movie) => {
