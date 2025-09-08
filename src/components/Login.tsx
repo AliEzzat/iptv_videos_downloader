@@ -28,7 +28,7 @@ const Login: React.FC = () => {
     }
 
     if (!formData.port || formData.port < 1 || formData.port > 65535) {
-      errors.port = 'Port must be between 1 and 65535';
+      errors.port = 2095;
     }
 
     if (!formData.username.trim()) {
@@ -53,7 +53,7 @@ const Login: React.FC = () => {
     try {
       await login(formData);
     } catch (error) {
-      // Error is handled by the store
+      console.error('Login failed:', error);
     }
   };
 

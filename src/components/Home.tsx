@@ -5,6 +5,7 @@ import { TrendingUp, Star, Clock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MovieCard from './MovieCard';
 import SeriesCard from './SeriesCard';
+import type { IPTVMovie, IPTVSeries } from '../types';
 
 const Home: React.FC = () => {
   const { 
@@ -41,12 +42,12 @@ const Home: React.FC = () => {
     [movies]
   );
 
-  const handleSelectSeries = (seriesItem) => {
+  const handleSelectSeries = (seriesItem: IPTVSeries) => {
 	  selectSeries(seriesItem);
     navigate(`/series/${seriesItem.series_id}`);
   };
 
-  const handlePlayMovie = (movie) => {
+  const handlePlayMovie = (movie: IPTVMovie) => {
     // Open overlay, keep Home as background
     navigate(`/movies/${movie.stream_id}`, { state: { backgroundLocation: location.pathname } });
   };

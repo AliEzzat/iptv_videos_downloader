@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import Layout from './components/Layout';
@@ -48,7 +48,10 @@ function VideoOverlay() {
 function AppRoutes() {
   const location = useLocation();
   const state = location.state as { backgroundLocation?: Location };
-
+  const navigate = useNavigate();
+  const handleClose = () => {
+      navigate(-1);
+  };
   // Use backgroundLocation for main content, real location for overlays
   return (
     <>
@@ -56,7 +59,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/movies" element={<BrowseMovies />} />
         <Route path="/series" element={<BrowseSeries />} />
-        <Route path="/series/:seriesId" element={<SeriesDetail />} />
+        <Route path="/series/:seriesId" element={<SeriesDetail onClose={handleClose}/>} />
         <Route path="/search" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

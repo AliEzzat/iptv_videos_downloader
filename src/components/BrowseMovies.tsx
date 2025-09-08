@@ -3,6 +3,7 @@ import { useAppStore } from '../store/useAppStore';
 import MovieCard from './MovieCard';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import type { IPTVMovie } from '../types';
 
 const PAGE_SIZE = 30;
 
@@ -18,7 +19,6 @@ const BrowseMovies: React.FC = () => {
     loadMovieCategories,
     setSelectedCategory,
     setSearchQuery,
-    searchMovies,
     selectMovie,
   } = useAppStore();
 
@@ -52,12 +52,12 @@ const BrowseMovies: React.FC = () => {
     setPage(1); // reset page on category change
   };
 
-  const handlePlay = (movie) => {
+  const handlePlay = (movie: IPTVMovie) => {
     selectMovie(movie);
     navigate(`/movies/${movie.stream_id}`, { state: { backgroundLocation: location.pathname } });
   };
 
-  const handleDownload = (movie) => {
+  const handleDownload = (movie: IPTVMovie) => {
     console.log('Download movie:', movie.name);
   };
 

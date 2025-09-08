@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, Download, Star, Tv } from 'lucide-react';
+import { type IPTVSeries } from '../types';
 
 interface SeriesCardProps {
   series: IPTVSeries;

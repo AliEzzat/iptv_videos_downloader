@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Play, Calendar, Clock, Star, Users, Film, Download } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { type IPTVEpisode } from '../types';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SeriesDetailProps {
   onClose: () => void;
@@ -24,14 +24,16 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
 
   useEffect(() => {
     if (selectedSeries) {
-      loadSeriesDetail(selectedSeries.series_id);
+      loadSeriesDetail(selectedSeries.series_id.toString());
     }
   }, [selectedSeries, loadSeriesDetail]);
 
   const handlePlayEpisode = (episode: IPTVEpisode) => {
+    let seriesId = selectedSeries?.series_id;
+    if(!seriesId) seriesId = 123; // Fallback series ID if none is selected
     // Open overlay, keep SeriesDetail as background
     selectEpisode(episode);
-    navigate(`/series/${selectedSeries.series_id}/episodes/${episode.id}`, { state: { backgroundLocation: location.pathname } });
+    navigate(`/series/${seriesId}/episodes/${episode.id}`, { state: { backgroundLocation: location.pathname } });
   };
 
   if (!selectedSeries || !selectedSeriesDetail) {

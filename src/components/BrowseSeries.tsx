@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import SeriesCard from './SeriesCard';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
+import type { IPTVSeries } from '../types';
 
 const PAGE_SIZE = 30;
 
@@ -50,12 +51,12 @@ const BrowseSeries: React.FC = () => {
     setPage(1); // reset page on category change
   };
 
-  const handleSelectSeries = (seriesItem) => {
+  const handleSelectSeries = (seriesItem: IPTVSeries) => {
     selectSeries(seriesItem);
     navigate(`/series/${seriesItem.series_id}`);
   };
 
-  const handleDownload = (seriesItem) => {
+  const handleDownload = (seriesItem: IPTVSeries) => {
     console.log('Download series:', seriesItem.name);
   };
 
