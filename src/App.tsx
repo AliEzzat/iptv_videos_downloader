@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Home from './components/Home';
-import BrowseMovies from './components/BrowseMovies';
-import BrowseSeries from './components/BrowseSeries';
-import SeriesDetail from './components/SeriesDetail';
 import VideoPlayer from './components/VideoPlayer';
+
+const BrowseMovies = lazy(() => import('./components/BrowseMovies'));
+const BrowseSeries = lazy(() => import('./components/BrowseSeries'));
+const SeriesDetail = lazy(() => import('./components/SeriesDetail'));
 
 function App() {
   const { 

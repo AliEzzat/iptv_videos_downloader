@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Link } from 'react-router-dom';
 import { Play, TrendingUp, Star, Clock } from 'lucide-react';
@@ -15,16 +15,31 @@ const Home: React.FC = () => {
   } = useAppStore();
 
   useEffect(() => {
-    // Load featured content
-    loadMovies();
-    loadSeries();
-  }, [loadMovies, loadSeries]);
+    if (!movies || movies.length === 0) {
+      loadMovies();
+    }
+    if (!series || series.length === 0) {
+      loadSeries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
-  const featuredMovies = (movies || []).slice(0, 6);
-  const featuredSeries = (series || []).slice(0, 6);
-  const recentMovies = (movies || [])
-    .sort((a, b) => new Date(b.added).getTime() - new Date(a.added).getTime())
-    .slice(0, 8);
+  const featuredMovies = useMemo(
+    () => (movies || []).slice(0, 6),
+    [movies]
+  );
+  const featuredSeries = useMemo(
+    () => (series || []).slice(0, 6),
+    [series]
+  );
+  const recentMovies = useMemo(
+    () =>
+      (movies || [])
+        .slice()
+        .sort((a, b) => new Date(b.added).getTime() - new Date(a.added).getTime())
+        .slice(0, 8),
+    [movies]
+  );
 
   return (
     <div className="p-6 space-y-8">
@@ -149,9 +164,9 @@ const Home: React.FC = () => {
                 onClick={() => selectSeries(series)}
               >
                 <div className="aspect-[2/3] relative">
-                  {series.stream_icon ? (
+                  {series.cover ? (
                     <img
-                      src={series.stream_icon}
+                      src={series.cover}
                       alt={series.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />

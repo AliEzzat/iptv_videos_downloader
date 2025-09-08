@@ -4,8 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { 
   Home, 
   Film, 
-  Tv, 
-  Search, 
+  Tv,
   User, 
   LogOut, 
   Menu, 
@@ -25,8 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Movies', href: '/movies', icon: Film },
-    { name: 'TV Series', href: '/series', icon: Tv },
-    { name: 'Search', href: '/search', icon: Search },
+    { name: 'TV Series', href: '/series', icon: Tv }
   ];
 
   const isActive = (path: string) => {
@@ -162,6 +160,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Page content */}
         <main className="flex-1">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex flex-col sm:flex-row justify-between items-center py-4">
+              {/* ...existing code... */}
+            </nav>
+          </div>
           {children}
         </main>
       </div>

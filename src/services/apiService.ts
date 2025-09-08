@@ -105,6 +105,10 @@ class ApiService {
     const response = await axios.get(`${apiUrl}/player_api.php`, { 
       params: requestParams 
     });
+    // If the API returns an object, convert to array
+    if (response.data && !Array.isArray(response.data)) {
+      return Object.values(response.data);
+    }
     return response.data;
   }
 

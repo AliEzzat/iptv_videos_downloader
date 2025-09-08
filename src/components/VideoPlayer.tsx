@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle 
 } from 'lucide-react';
+import Hls from 'hls.js';
 // import { useAppStore } from '../store/useAppStore';
 import { apiService } from '../services/apiService';
 
@@ -40,6 +41,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [buffered, setBuffered] = useState(0);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // const { addDownload } = useAppStore();
 
@@ -55,9 +58,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     // Set video attributes for better seeking performance
-    video.preload = 'metadata';
-    video.crossOrigin = 'anonymous';
-    video.src = streamUrl;
+    video.preload = 'auto';
+    video.autoplay = true;
+    video.playsInline = true;
+
+    if (streamUrl.endsWith('.m3u8') && Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      return () => hls.destroy();
+    } else {
+      video.src = streamUrl;
+    }
 
     const handleLoadedMetadata = () => {
       setIsLoading(false);
@@ -127,6 +139,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [streamId, streamType, containerExtension]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleWaiting = () => setIsLoading(true);
+    const handlePlaying = () => setIsLoading(false);
+
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('playing', handlePlaying);
+
+    return () => {
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('playing', handlePlaying);
+    };
+  }, []);
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -179,22 +207,66 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleDownload = async () => {
     try {
+      setIsDownloading(true);
+      setDownloadProgress(0);
+
       const streamUrl = apiService.getStreamUrl(streamId, streamType, containerExtension);
-      if (!streamUrl) {
-        throw new Error('Stream URL not available');
+      if (!streamUrl) throw new Error('Stream URL not available');
+
+      // Create download request without credentials
+      const response = await fetch(streamUrl, {
+        method: 'GET',
+        mode: 'cors'
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch video stream');
+
+      const contentLength = response.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      // Create response reader
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Failed to get stream reader');
+
+      let received = 0;
+      const chunks: Uint8Array[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          
+          if (total) {
+            const progress = Math.round((received / total) * 100);
+            setDownloadProgress(progress);
+          }
+        }
       }
 
-      // Create a link element and trigger download
+      // Create and trigger download
+      const blob = new Blob(chunks, { 
+        type: `video/${containerExtension}` 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = streamUrl;
+      a.href = url;
       a.download = `${title}.${containerExtension}`;
-      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
     } catch (error) {
       console.error('Download failed:', error);
       alert('Download failed. Please try again.');
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
     }
   };
 
@@ -237,15 +309,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black z-50" onMouseMove={handleMouseMove}>
+    <div
+      className="fixed inset-0 bg-black z-50"
+      onMouseMove={handleMouseMove}
+      onClick={togglePlay}
+      style={{ cursor: isPlaying ? 'pointer' : 'pointer' }}
+    >
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
-        onClick={togglePlay}
       />
 
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex items-center space-x-3">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
             <span className="text-white text-lg">Loading stream...</span>
@@ -254,16 +330,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       {showControls && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300">
-          <div className="flex items-center space-x-4 mb-4">
-            <button
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="video-controls grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+            <button 
+              className="touch-none p-4 sm:p-2" 
               onClick={togglePlay}
-              className="text-white hover:text-primary-400 transition-colors"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
             </button>
 
-            <div className="flex-1 flex items-center space-x-4">
+            <div className="flex-1 flex items-center space-x-4 mb-4">
               <span className="text-white text-sm">{formatTime(currentTime)}</span>
 
               <div className="flex-1 relative">
@@ -326,6 +406,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {isDownloading && (
+        <div className="absolute top-0 left-0 right-0 bg-black/80 p-4 flex flex-col items-center">
+          <div className="text-white mb-2">
+            Downloading: {downloadProgress}%
+          </div>
+          <div className="w-full h-2 bg-gray-700 rounded-full">
+            <div 
+              className="h-full bg-blue-500 rounded-full transition-all duration-300"
+              style={{ width: `${downloadProgress || 0}%` }}
+            />
           </div>
         </div>
       )}

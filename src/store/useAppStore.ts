@@ -61,7 +61,7 @@ export const useAppStore = create<AppStore>()(
       credentials: null,
       accountInfo: null,
       movies: [],
-      series: [],
+      series: [], // Now array of new IPTVSeries type
       movieCategories: [],
       seriesCategories: [],
       selectedMovie: null,

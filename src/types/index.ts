@@ -65,28 +65,23 @@ export interface IPTVMovie {
 }
 
 export interface IPTVSeries {
-  series_id: string;
+  num: number;
   name: string;
-  added: string;
-  category_id: string;
-  container_extension: string;
-  custom_sid: string;
-  direct_source: string;
-  icon: string;
-  stream_icon: string;
-  stream_type: string;
-  rating: string;
-  rating_5based: number;
-  backdrop_path: string[];
+  series_id: number;
+  cover: string;
   plot: string;
   cast: string;
   director: string;
   genre: string;
-  release_date: string;
+  releaseDate: string;
   last_modified: string;
-  tmdb_id: string;
+  rating: string;
+  rating_5based: number;
+  backdrop_path: string[];
   youtube_trailer: string;
-  category_ids: number[];
+  episode_run_time: string;
+  category_id: string;
+  // Optionally add any other fields you expect
 }
 
 export interface IPTVEpisode {
@@ -178,6 +173,7 @@ export interface IPTVEpisode {
       };
       tags: {
         language: string;
+        HANDLER_NAME?: string;
         DURATION: string;
       };
     };
@@ -190,18 +186,17 @@ export interface IPTVEpisode {
 }
 
 export interface IPTVSeason {
-  air_date: string;
-  episode_count: number;
-  id: number;
-  name: string;
-  overview: string;
-  season_number: number;
-  cover: string;
-  cover_big: string;
-  episodes: IPTVEpisode[];
+  air_date?: string;
+  episode_count?: number;
+  id?: number;
+  name?: string;
+  overview?: string;
+  season_number?: number;
+  cover?: string;
+  cover_big?: string;
+  episodes?: IPTVEpisode[];
 }
 
-// New types for series detail API response
 export interface IPTVSeriesDetail {
   seasons: IPTVSeason[];
   info: {
