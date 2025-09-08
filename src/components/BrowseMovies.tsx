@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import MovieCard from './MovieCard';
-import { type IPTVMovie } from '../types';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
+
+const PAGE_SIZE = 30;
 
 const BrowseMovies: React.FC = () => {
   const {
-    movies,
+    movies, // all movies loaded at once
     movieCategories,
     selectedCategory,
     searchQuery,
@@ -22,49 +23,67 @@ const BrowseMovies: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [localSearch, setLocalSearch] = useState('');
 
   useEffect(() => {
     loadMovieCategories();
-    loadMovies();
-  }, [loadMovieCategories, loadMovies]);
+    loadMovies(selectedCategory);
+  }, [loadMovieCategories, loadMovies, selectedCategory]);
 
+  // Debounce search input
   useEffect(() => {
-    if (selectedCategory) {
-      loadMovies(selectedCategory);
-    } else {
-      loadMovies();
-    }
-  }, [selectedCategory, loadMovies]);
+    const handler = setTimeout(() => {
+      setSearchQuery(localSearch);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearch, setSearchQuery]);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      searchMovies(query);
-    } else {
-      loadMovies(selectedCategory);
-    }
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalSearch(e.target.value);
+    setPage(1); // reset page on search change
   };
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
+    setPage(1); // reset page on category change
   };
 
-  const handlePlay = (movie: IPTVMovie) => {
+  const handlePlay = (movie) => {
     selectMovie(movie);
   };
 
-  const handleDownload = (movie: IPTVMovie) => {
-    // Download functionality will be implemented
+  const handleDownload = (movie) => {
     console.log('Download movie:', movie.name);
   };
 
-  const filteredMovies = movies.filter(movie => {
-    if (!searchQuery) return true;
-    return movie.name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Filter movies by category + search query, memoized for performance
+  const filteredMovies = useMemo(() => {
+    let filtered = movies;
+    if (selectedCategory) {
+      filtered = filtered.filter(movie => movie.category_id === selectedCategory);
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(movie =>
+        movie.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return filtered;
+  }, [movies, selectedCategory, searchQuery]);
+
+  // Calculate movies to show on current page
+  const paginatedMovies = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredMovies.slice(start, end);
+  }, [filteredMovies, page]);
+
+  // Check if we have more pages
+  const hasMorePages = page * PAGE_SIZE < filteredMovies.length;
 
   return (
     <div className="p-6">
+      {/* Header with view mode */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-white">Movies</h1>
         <div className="flex items-center space-x-4">
@@ -94,8 +113,8 @@ const BrowseMovies: React.FC = () => {
           <input
             type="text"
             placeholder="Search movies..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={localSearch}
+            onChange={handleSearchChange}
             className="w-full pl-10 pr-4 py-3 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
@@ -145,10 +164,10 @@ const BrowseMovies: React.FC = () => {
         </div>
       )}
 
-      {/* Movies Grid */}
+      {/* Movies Grid/List */}
       {!isLoading && !error && (
         <>
-          {filteredMovies.length === 0 ? (
+          {paginatedMovies.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-12 h-12 text-dark-400" />
@@ -159,12 +178,14 @@ const BrowseMovies: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className={`grid gap-6 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            }`}>
-              {filteredMovies.map((movie) => (
+            <div
+              className={`grid gap-6 ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                  : 'grid-cols-1'
+              }`}
+            >
+              {paginatedMovies.map((movie) => (
                 <MovieCard
                   key={movie.stream_id}
                   movie={movie}
@@ -175,6 +196,26 @@ const BrowseMovies: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Pagination Controls */}
+      {!isLoading && !error && filteredMovies.length > PAGE_SIZE && (
+        <div className="flex justify-center mt-6 space-x-4">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(p => Math.max(p - 1, 1))}
+            className="px-4 py-2 bg-dark-700 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            disabled={!hasMorePages}
+            onClick={() => setPage(p => (hasMorePages ? p + 1 : p))}
+            className="px-4 py-2 bg-dark-700 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );

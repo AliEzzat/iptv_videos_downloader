@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import SeriesCard from './SeriesCard';
-import { type IPTVSeries } from '../types';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
+
+const PAGE_SIZE = 30;
 
 const BrowseSeries: React.FC = () => {
   const {
@@ -16,52 +17,66 @@ const BrowseSeries: React.FC = () => {
     loadSeriesCategories,
     setSelectedCategory,
     setSearchQuery,
-    searchSeries,
     selectSeries,
   } = useAppStore();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [localSearch, setLocalSearch] = useState('');
 
   useEffect(() => {
     loadSeriesCategories();
-    loadSeries();
-  }, [loadSeriesCategories, loadSeries]);
+    loadSeries(selectedCategory);
+  }, [loadSeriesCategories, loadSeries, selectedCategory]);
 
+  // Debounce search input to reduce filtering on every keystroke
   useEffect(() => {
-    if (selectedCategory) {
-      loadSeries(selectedCategory);
-    } else {
-      loadSeries();
-    }
-  }, [selectedCategory, loadSeries]);
+    const handler = setTimeout(() => {
+      setSearchQuery(localSearch);
+      setPage(1); // reset page on new search
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearch, setSearchQuery]);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      searchSeries(query);
-    } else {
-      loadSeries(selectedCategory);
-    }
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalSearch(e.target.value);
   };
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
+    setPage(1); // reset page on category change
   };
 
-  const handleSelect = (series: IPTVSeries) => {
-    selectSeries(series);
+  const handleSelect = (seriesItem) => {
+    selectSeries(seriesItem);
   };
 
-  const handleDownload = (series: IPTVSeries) => {
-    // Download functionality will be implemented
-    console.log('Download series:', series.name);
+  const handleDownload = (seriesItem) => {
+    console.log('Download series:', seriesItem.name);
   };
 
-  const filteredSeries = series.filter(seriesItem => {
-    if (!searchQuery) return true;
-    return seriesItem.name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Memoized filtered series by category and search
+  const filteredSeries = useMemo(() => {
+    let filtered = series;
+    if (selectedCategory) {
+      filtered = filtered.filter(item => item.category_id === selectedCategory);
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return filtered;
+  }, [series, selectedCategory, searchQuery]);
+
+  // Slice the filtered list for pagination
+  const paginatedSeries = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredSeries.slice(start, start + PAGE_SIZE);
+  }, [filteredSeries, page]);
+
+  const hasMorePages = page * PAGE_SIZE < filteredSeries.length;
 
   return (
     <div className="p-6">
@@ -94,8 +109,8 @@ const BrowseSeries: React.FC = () => {
           <input
             type="text"
             placeholder="Search series..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            value={localSearch}
+            onChange={handleSearchChange}
             className="w-full pl-10 pr-4 py-3 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
@@ -117,7 +132,7 @@ const BrowseSeries: React.FC = () => {
                 className="px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">All Categories</option>
-                {seriesCategories.map((category) => (
+                {seriesCategories.map(category => (
                   <option key={category.category_id} value={category.category_id}>
                     {category.category_name}
                   </option>
@@ -145,10 +160,10 @@ const BrowseSeries: React.FC = () => {
         </div>
       )}
 
-      {/* Series Grid */}
+      {/* Series Grid/List */}
       {!isLoading && !error && (
         <>
-          {filteredSeries.length === 0 ? (
+          {paginatedSeries.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-12 h-12 text-dark-400" />
@@ -159,12 +174,14 @@ const BrowseSeries: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className={`grid gap-6 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            }`}>
-              {filteredSeries.map((seriesItem) => (
+            <div
+              className={`grid gap-6 ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                  : 'grid-cols-1'
+              }`}
+            >
+              {paginatedSeries.map(seriesItem => (
                 <SeriesCard
                   key={seriesItem.series_id}
                   series={seriesItem}
@@ -175,6 +192,26 @@ const BrowseSeries: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Pagination controls */}
+      {!isLoading && !error && filteredSeries.length > PAGE_SIZE && (
+        <div className="flex justify-center mt-6 space-x-4">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(p => Math.max(p - 1, 1))}
+            className="px-4 py-2 bg-dark-700 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            disabled={!hasMorePages}
+            onClick={() => setPage(p => (hasMorePages ? p + 1 : p))}
+            className="px-4 py-2 bg-dark-700 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );
