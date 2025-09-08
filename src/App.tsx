@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import Layout from './components/Layout';
@@ -14,13 +14,21 @@ function VideoOverlay() {
   const navigate = useNavigate();
   const { movieId, seriesId, episodeId } = useParams();
 
+  const handleClose = () => {
+    if (seriesId && episodeId) {
+      navigate(`/series/${seriesId}`, { replace: true });
+    } else {
+      navigate(-1);
+    }
+  };
+
   if (movieId) {
     return (
       <VideoPlayer
         streamId={movieId}
         streamType="movie"
         title={`Movie ${movieId}`}
-        onClose={() => navigate(-1)}
+        onClose={handleClose}
       />
     );
   }
@@ -30,7 +38,7 @@ function VideoOverlay() {
         streamId={episodeId}
         streamType="series"
         title={`Episode ${episodeId}`}
-        onClose={() => navigate(-1)}
+        onClose={handleClose}
       />
     );
   }
@@ -39,11 +47,12 @@ function VideoOverlay() {
 
 function AppRoutes() {
   const location = useLocation();
-  const state = location.state as { backgroundLocation?: string };
+  const state = location.state as { backgroundLocation?: Location };
 
+  // Use backgroundLocation for main content, real location for overlays
   return (
     <>
-      <Routes location={state?.backgroundLocation ? { ...location, pathname: state.backgroundLocation } : location}>
+      <Routes location={state?.backgroundLocation || location}>
         <Route path="/" element={<Home />} />
         <Route path="/movies" element={<BrowseMovies />} />
         <Route path="/series" element={<BrowseSeries />} />
@@ -51,26 +60,20 @@ function AppRoutes() {
         <Route path="/search" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-      {/* Overlay routes */}
-      <Routes>
-        <Route path="/movies/:movieId" element={<VideoOverlay />} />
-        <Route path="/series/:seriesId/episodes/:episodeId" element={<VideoOverlay />} />
-      </Routes>
+      {/* Overlay: only render when overlay route matches */}
+      {(location.pathname.match(/^\/movies\/[^/]+$/) ||
+        location.pathname.match(/^\/series\/[^/]+\/episodes\/[^/]+$/)) && (
+        <Routes>
+          <Route path="/movies/:movieId" element={<VideoOverlay />} />
+          <Route path="/series/:seriesId/episodes/:episodeId" element={<VideoOverlay />} />
+        </Routes>
+      )}
     </>
   );
 }
 
 function App() {
-  const { 
-    isAuthenticated, 
-    selectedMovie, 
-    selectedSeries, 
-    selectedEpisode,
-    selectMovie, 
-    selectSeries,
-    selectEpisode 
-  } = useAppStore();
+  const { isAuthenticated } = useAppStore();
 
   if (!isAuthenticated) {
     return <Login />;
@@ -80,36 +83,10 @@ function App() {
     <Router>
       <div className="App">
         <Layout>
-          <AppRoutes />
+          <Suspense fallback={<div>Loading...</div>}>
+            <AppRoutes />
+          </Suspense>
         </Layout>
-
-        {/* Series Detail Modal */}
-        {selectedSeries && !selectedEpisode && (
-          <SeriesDetail
-            onClose={() => selectSeries(null)}
-          />
-        )}
-
-        {/* Video Player Modal */}
-        {selectedMovie && (
-          <VideoPlayer
-            streamId={selectedMovie.stream_id}
-            streamType="movie"
-            title={selectedMovie.name}
-            containerExtension={selectedMovie.container_extension}
-            onClose={() => selectMovie(null)}
-          />
-        )}
-
-        {selectedEpisode && (
-          <VideoPlayer
-            streamId={selectedEpisode.id}
-            streamType="series"
-            title={selectedEpisode.title}
-            containerExtension={selectedEpisode.container_extension}
-            onClose={() => selectEpisode(null)}
-          />
-        )}
       </div>
     </Router>
   );
