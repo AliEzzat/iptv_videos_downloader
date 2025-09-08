@@ -3,10 +3,10 @@ import { authService } from './authService';
 import { 
   type IPTVMovie, 
   type IPTVSeries, 
+  type IPTVSeriesDetail,
   type IPTVCategory, 
   type IPTVSeason, 
-  type IPTVEpisode,
-  type IPTVApiResponse 
+  type IPTVEpisode
 } from '../types';
 
 class ApiService {
@@ -108,7 +108,7 @@ class ApiService {
     return response.data;
   }
 
-  async getSeriesInfo(seriesId: string): Promise<IPTVSeries | null> {
+  async getSeriesInfo(seriesId: string): Promise<IPTVSeriesDetail | null> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     

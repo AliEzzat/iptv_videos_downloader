@@ -6,10 +6,19 @@ import Login from './components/Login';
 import Home from './components/Home';
 import BrowseMovies from './components/BrowseMovies';
 import BrowseSeries from './components/BrowseSeries';
+import SeriesDetail from './components/SeriesDetail';
 import VideoPlayer from './components/VideoPlayer';
 
 function App() {
-  const { isAuthenticated, selectedMovie, selectedSeries, selectMovie, selectSeries } = useAppStore();
+  const { 
+    isAuthenticated, 
+    selectedMovie, 
+    selectedSeries, 
+    selectedEpisode,
+    selectMovie, 
+    selectSeries,
+    selectEpisode 
+  } = useAppStore();
 
   if (!isAuthenticated) {
     return <Login />;
@@ -28,6 +37,13 @@ function App() {
           </Routes>
         </Layout>
 
+        {/* Series Detail Modal */}
+        {selectedSeries && !selectedEpisode && (
+          <SeriesDetail
+            onClose={() => selectSeries(null)}
+          />
+        )}
+
         {/* Video Player Modal */}
         {selectedMovie && (
           <VideoPlayer
@@ -39,13 +55,13 @@ function App() {
           />
         )}
 
-        {selectedSeries && (
+        {selectedEpisode && (
           <VideoPlayer
-            streamId={selectedSeries.series_id}
+            streamId={selectedEpisode.id}
             streamType="series"
-            title={selectedSeries.name}
-            containerExtension={selectedSeries.container_extension}
-            onClose={() => selectSeries(null)}
+            title={selectedEpisode.title}
+            containerExtension={selectedEpisode.container_extension}
+            onClose={() => selectEpisode(null)}
           />
         )}
       </div>

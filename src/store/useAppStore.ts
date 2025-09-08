@@ -3,10 +3,9 @@ import { persist } from 'zustand/middleware';
 import { 
   type AppState, 
   type IPTVCredentials, 
-  type IPTVAccountInfo, 
   type IPTVMovie, 
   type IPTVSeries, 
-  type IPTVCategory, 
+  type IPTVSeriesDetail,
   type IPTVSeason, 
   type IPTVEpisode,
   type DownloadProgress 
@@ -29,8 +28,12 @@ interface AppStore extends AppState {
   // Selection actions
   selectMovie: (movie: IPTVMovie | null) => void;
   selectSeries: (series: IPTVSeries | null) => void;
+  selectSeriesDetail: (seriesDetail: IPTVSeriesDetail | null) => void;
   selectSeason: (season: IPTVSeason | null) => void;
   selectEpisode: (episode: IPTVEpisode | null) => void;
+  
+  // Series detail actions
+  loadSeriesDetail: (seriesId: string) => Promise<void>;
   
   // Search and filter actions
   setSearchQuery: (query: string) => void;
@@ -52,7 +55,7 @@ interface AppStore extends AppState {
 
 export const useAppStore = create<AppStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       isAuthenticated: false,
       credentials: null,
@@ -63,6 +66,7 @@ export const useAppStore = create<AppStore>()(
       seriesCategories: [],
       selectedMovie: null,
       selectedSeries: null,
+      selectedSeriesDetail: null,
       selectedSeason: null,
       selectedEpisode: null,
       searchQuery: '',
@@ -182,12 +186,40 @@ export const useAppStore = create<AppStore>()(
         set({ selectedSeries: series });
       },
 
+      selectSeriesDetail: (seriesDetail: IPTVSeriesDetail | null) => {
+        set({ selectedSeriesDetail: seriesDetail });
+      },
+
       selectSeason: (season: IPTVSeason | null) => {
         set({ selectedSeason: season });
       },
 
       selectEpisode: (episode: IPTVEpisode | null) => {
         set({ selectedEpisode: episode });
+      },
+
+      // Series detail actions
+      loadSeriesDetail: async (seriesId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const seriesDetail = await apiService.getSeriesInfo(seriesId);
+          if (seriesDetail) {
+            set({ 
+              selectedSeriesDetail: seriesDetail,
+              isLoading: false 
+            });
+          } else {
+            set({ 
+              error: 'Failed to load series details',
+              isLoading: false 
+            });
+          }
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to load series details',
+            isLoading: false,
+          });
+        }
       },
 
       // Search and filter actions

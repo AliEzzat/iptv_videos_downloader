@@ -95,14 +95,93 @@ export interface IPTVEpisode {
   title: string;
   container_extension: string;
   info: {
-    plot: string;
-    cast: string;
-    director: string;
-    genre: string;
-    release_date: string;
-    rating: string;
+    duration_secs: number;
     duration: string;
-    movie_image: string;
+    video: {
+      index: number;
+      codec_name: string;
+      codec_long_name: string;
+      profile: string;
+      codec_type: string;
+      codec_time_base: string;
+      codec_tag_string: string;
+      codec_tag: string;
+      width: number;
+      height: number;
+      coded_width: number;
+      coded_height: number;
+      has_b_frames: number;
+      pix_fmt: string;
+      level: number;
+      chroma_location: string;
+      field_order: string;
+      refs: number;
+      is_avc: string;
+      nal_length_size: string;
+      r_frame_rate: string;
+      avg_frame_rate: string;
+      time_base: string;
+      start_pts: number;
+      start_time: string;
+      bits_per_raw_sample: string;
+      disposition: {
+        default: number;
+        dub: number;
+        original: number;
+        comment: number;
+        lyrics: number;
+        karaoke: number;
+        forced: number;
+        hearing_impaired: number;
+        visual_impaired: number;
+        clean_effects: number;
+        attached_pic: number;
+        timed_thumbnails: number;
+      };
+      tags: {
+        HANDLER_NAME: string;
+        DURATION: string;
+      };
+    };
+    audio: {
+      index: number;
+      codec_name: string;
+      codec_long_name: string;
+      profile: string;
+      codec_type: string;
+      codec_time_base: string;
+      codec_tag_string: string;
+      codec_tag: string;
+      sample_fmt: string;
+      sample_rate: string;
+      channels: number;
+      channel_layout: string;
+      bits_per_sample: number;
+      r_frame_rate: string;
+      avg_frame_rate: string;
+      time_base: string;
+      start_pts: number;
+      start_time: string;
+      disposition: {
+        default: number;
+        dub: number;
+        original: number;
+        comment: number;
+        lyrics: number;
+        karaoke: number;
+        forced: number;
+        hearing_impaired: number;
+        visual_impaired: number;
+        clean_effects: number;
+        attached_pic: number;
+        timed_thumbnails: number;
+      };
+      tags: {
+        language: string;
+        DURATION: string;
+      };
+    };
+    bitrate: number;
   };
   custom_sid: string;
   added: string;
@@ -122,6 +201,30 @@ export interface IPTVSeason {
   episodes: IPTVEpisode[];
 }
 
+// New types for series detail API response
+export interface IPTVSeriesDetail {
+  seasons: IPTVSeason[];
+  info: {
+    name: string;
+    cover: string;
+    plot: string;
+    cast: string;
+    director: string;
+    genre: string;
+    releaseDate: string;
+    last_modified: string;
+    rating: string;
+    rating_5based: number;
+    backdrop_path: string[];
+    youtube_trailer: string;
+    episode_run_time: string;
+    category_id: string;
+  };
+  episodes: {
+    [seasonNumber: string]: IPTVEpisode[];
+  };
+}
+
 // App State Types
 export interface AppState {
   isAuthenticated: boolean;
@@ -133,6 +236,7 @@ export interface AppState {
   seriesCategories: IPTVCategory[];
   selectedMovie: IPTVMovie | null;
   selectedSeries: IPTVSeries | null;
+  selectedSeriesDetail: IPTVSeriesDetail | null;
   selectedSeason: IPTVSeason | null;
   selectedEpisode: IPTVEpisode | null;
   searchQuery: string;

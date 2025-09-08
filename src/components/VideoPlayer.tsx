@@ -9,7 +9,7 @@ import {
   Loader2,
   AlertCircle 
 } from 'lucide-react';
-import { useAppStore } from '../store/useAppStore';
+// import { useAppStore } from '../store/useAppStore';
 import { apiService } from '../services/apiService';
 
 interface VideoPlayerProps {
@@ -28,20 +28,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onClose 
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hideControlsTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideControlsTimer = useRef<number | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [buffered, setBuffered] = useState(0);
 
-  const { addDownload } = useAppStore();
+  // const { addDownload } = useAppStore();
 
   useEffect(() => {
     const video = videoRef.current;
@@ -54,6 +54,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
+    // Set video attributes for better seeking performance
+    video.preload = 'metadata';
+    video.crossOrigin = 'anonymous';
     video.src = streamUrl;
 
     const handleLoadedMetadata = () => {
@@ -70,9 +73,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsLoading(false);
     };
 
+    const handleSeeking = () => {
+      setIsLoading(true);
+    };
+
+    const handleSeeked = () => {
+      setIsLoading(false);
+    };
+
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('error', handleError);
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('seeking', handleSeeking);
+    video.addEventListener('seeked', handleSeeked);
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleDurationChange = () => setDuration(video.duration);
@@ -99,6 +112,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('error', handleError);
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('seeking', handleSeeking);
+      video.removeEventListener('seeked', handleSeeked);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
       video.removeEventListener('play', handlePlay);
@@ -164,17 +179,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleDownload = async () => {
     try {
-      const blob = await apiService.downloadStream(streamId, streamType);
-      const url = URL.createObjectURL(blob);
+      const streamUrl = apiService.getStreamUrl(streamId, streamType, containerExtension);
+      if (!streamUrl) {
+        throw new Error('Stream URL not available');
+      }
+
+      // Create a link element and trigger download
       const a = document.createElement('a');
-      a.href = url;
+      a.href = streamUrl;
       a.download = `${title}.${containerExtension}`;
+      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
     }
   };
 
