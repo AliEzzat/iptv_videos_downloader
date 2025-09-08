@@ -9,7 +9,7 @@ import {
   type IPTVEpisode
 } from '../types';
 
-const API_BASE = '/api/proxy/';
+const API_BASE = '/api/proxy';
 
 class ApiService {
   private getCredentials() {
@@ -22,26 +22,20 @@ class ApiService {
 
   private getApiUrl() {
     const credentials = this.getCredentials();
-    return `${API_BASE}${credentials.url}:${credentials.port}`;
+    return `http://${credentials.url}:${credentials.port}`;
   }
 
   private getApiParams() {
     const credentials = this.getCredentials();
-    return {
-      username: credentials.username,
-      password: credentials.password,
-    };
+    return `username=${credentials.username}&password=${credentials.password}`
   }
 
   async getAccountInfo() {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_account_info',
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_account_info`);
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data;
   }
@@ -49,12 +43,10 @@ class ApiService {
   async getMovieCategories(): Promise<IPTVCategory[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_vod_categories',
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_vod_categories`);
+
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data;
   }
@@ -62,12 +54,9 @@ class ApiService {
   async getSeriesCategories(): Promise<IPTVCategory[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_series_categories',
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series_categories`);
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data;
   }
@@ -75,18 +64,10 @@ class ApiService {
   async getMovies(categoryId?: string): Promise<IPTVMovie[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_vod_streams${categoryId ? `&category_id=${categoryId}` : ''}`);
     
-    const requestParams: any = {
-      ...params,
-      action: 'get_vod_streams',
-    };
-    
-    if (categoryId) {
-      requestParams.category_id = categoryId;
-    }
-
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
-      params: requestParams 
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data;
   }
@@ -94,18 +75,10 @@ class ApiService {
   async getSeries(categoryId?: string): Promise<IPTVSeries[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series${categoryId ? `&category_id=${categoryId}` : ''}`);
     
-    const requestParams: any = {
-      ...params,
-      action: 'get_series',
-    };
-    
-    if (categoryId) {
-      requestParams.category_id = categoryId;
-    }
-
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
-      params: requestParams 
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     // If the API returns an object, convert to array
     if (response.data && !Array.isArray(response.data)) {
@@ -117,14 +90,11 @@ class ApiService {
   async getSeriesInfo(seriesId: string): Promise<IPTVSeriesDetail | null> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series_info&series_id=${seriesId}`);
     
     try {
-      const response = await axios.get(`${apiUrl}/player_api.php`, {
-        params: {
-          ...params,
-          action: 'get_series_info',
-          series_id: seriesId,
-        },
+      const response = await axios.get("", {
+        params: { url: targetUrl },
       });
       return response.data;
     } catch (error) {
@@ -136,13 +106,10 @@ class ApiService {
   async getSeriesSeasons(seriesId: string): Promise<IPTVSeason[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series_info&series_id=${seriesId}`);
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_series_info',
-        series_id: seriesId,
-      },
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data.seasons || [];
   }
@@ -150,13 +117,9 @@ class ApiService {
   async getSeriesEpisodes(seriesId: string, seasonNumber: number): Promise<IPTVEpisode[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_series_info',
-        series_id: seriesId,
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series_info&series_id=${seriesId}`);
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     
     const season = response.data.seasons?.find((s: IPTVSeason) => s.season_number === seasonNumber);
@@ -166,27 +129,20 @@ class ApiService {
   async searchMovies(query: string): Promise<IPTVMovie[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_vod_streams',
-        search: query,
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_vod_streams&search=${query}`);
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
+
     return response.data;
   }
 
   async searchSeries(query: string): Promise<IPTVSeries[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
-      params: {
-        ...params,
-        action: 'get_series',
-        search: query,
-      },
+    const targetUrl = encodeURIComponent(`${apiUrl}/player_api.php?${params}&action=get_series&search=${query}`);
+    const response = await axios.get("", {
+      params: { url: targetUrl },
     });
     return response.data;
   }
@@ -201,7 +157,7 @@ class ApiService {
       throw new Error('Stream URL not available');
     }
 
-    const response = await fetch(streamUrl);
+    const response = await fetch(`${API_BASE}?url=${streamUrl}`);
     if (!response.ok) {
       throw new Error(`Failed to download stream: ${response.statusText}`);
     }
