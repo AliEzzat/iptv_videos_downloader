@@ -37,7 +37,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_account_info',
@@ -50,7 +50,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_vod_categories',
@@ -63,7 +63,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_series_categories',
@@ -85,7 +85,7 @@ class ApiService {
       requestParams.category_id = categoryId;
     }
 
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
+    const response = await axios.get(`${apiUrl}/player_api_php`, { 
       params: requestParams 
     });
     return response.data;
@@ -104,7 +104,7 @@ class ApiService {
       requestParams.category_id = categoryId;
     }
 
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
+    const response = await axios.get(`${apiUrl}/player_api_php`, { 
       params: requestParams 
     });
     // If the API returns an object, convert to array
@@ -119,7 +119,7 @@ class ApiService {
     const params = this.getApiParams();
     
     try {
-      const response = await axios.get(`${apiUrl}/player_api.php`, {
+      const response = await axios.get(`${apiUrl}/player_api_php`, {
         params: {
           ...params,
           action: 'get_series_info',
@@ -137,7 +137,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_series_info',
@@ -151,7 +151,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_series_info',
@@ -167,7 +167,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_vod_streams',
@@ -181,7 +181,7 @@ class ApiService {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
     
-    const response = await axios.get(`${apiUrl}/player_api.php`, {
+    const response = await axios.get(`${apiUrl}/player_api_php`, {
       params: {
         ...params,
         action: 'get_series',

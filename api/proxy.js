@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   // Remove `/api/proxy` from the path and append the rest to the target URL
-  const targetUrl = req.url.replace(/^\/api\/proxy/, 'http://');
+  const targetUrl = req.url.replace(/^\/api\/proxy/, 'http://').replace('player_api_php', 'player_api.php');
   // Forward the method, headers, and body
   console.log(targetUrl);
   const fetchOptions = {

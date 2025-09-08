@@ -43,7 +43,7 @@ class AuthService {
     try {
       // First, test the connection and get account info
       const response = await axios.get(
-        `${API_BASE}${credentials.url}:${credentials.port}/player_api.php`,
+        `${API_BASE}${credentials.url}:${credentials.port}/player_api_php`,
         {
           params: {
             username: credentials.username,
