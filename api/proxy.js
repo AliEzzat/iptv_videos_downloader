@@ -1,6 +1,6 @@
 // Vercel Serverless Function
 
-const ALLOWED_HOSTS = ['lionzhd.com:8080', 'lionzhd.com:2095']; // whitelist of allowed backends
+const ALLOWED_HOSTS = ['lionzhd.com:8080', 'lionzhd.com:2095'];
 
 export default async function handler(req, res) {
   const rawUrl = req.query.url;
@@ -12,8 +12,6 @@ export default async function handler(req, res) {
   let targetUrl;
   try {
     targetUrl = decodeURIComponent(rawUrl);
-
-    // Sanitize / validate
     const urlObj = new URL(targetUrl);
     const hostPort = `${urlObj.hostname}:${urlObj.port}`;
     if (!ALLOWED_HOSTS.includes(hostPort)) {
@@ -24,19 +22,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    const headers = { ...req.headers, 'user-agent': 'VercelProxy' };
+    delete headers.host;
+
     const backendRes = await fetch(targetUrl, {
       method: req.method,
-      headers: { ...req.headers, host: undefined },
+      headers,
+      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
     });
 
-    // Forward backend response headers & status
     res.status(backendRes.status);
     backendRes.headers.forEach((val, key) => res.setHeader(key, val));
     const buffer = await backendRes.arrayBuffer();
     res.send(Buffer.from(buffer));
   } catch (err) {
     console.error('Proxy error:', err);
-
     return res.status(500).json({
       error: {
         code: '500',
