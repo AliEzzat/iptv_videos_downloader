@@ -9,6 +9,8 @@ import {
   type IPTVEpisode
 } from '../types';
 
+const API_BASE = '/api/proxy/';
+
 class ApiService {
   private getCredentials() {
     const credentials = authService.getCredentials();
@@ -20,7 +22,7 @@ class ApiService {
 
   private getApiUrl() {
     const credentials = this.getCredentials();
-    return `http://${credentials.url}:${credentials.port}`;
+    return `${API_BASE}${credentials.url}:${credentials.port}`;
   }
 
   private getApiParams() {
