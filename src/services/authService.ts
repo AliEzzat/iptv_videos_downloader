@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance } from 'axios';
 import { type IPTVCredentials, type IPTVAccountInfo } from '../types';
 
-const API_BASE = '/api/proxy/';
+const API_BASE = '/api/proxy';
 class AuthService {
   private api: AxiosInstance | null = null;
   private credentials: IPTVCredentials | null = null;
@@ -31,7 +31,7 @@ class AuthService {
     if (!this.credentials) return;
 
     this.api = axios.create({
-      baseURL: `${API_BASE}${this.credentials.url}:${this.credentials.port}`,
+      baseURL: `${API_BASE}`,
       timeout: 10000,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -42,17 +42,8 @@ class AuthService {
   async login(credentials: IPTVCredentials): Promise<IPTVAccountInfo> {
     try {
       // First, test the connection and get account info
-      const response = await axios.get(
-        `${API_BASE}${credentials.url}:${credentials.port}/player_api_php`,
-        {
-          params: {
-            username: credentials.username,
-            password: credentials.password,
-            action: 'get_account_info',
-          },
-          timeout: 10000,
-        }
-      );
+      const targetURL = encodeURIComponent(`http://${credentials.url}:${credentials.port}/player_api.php?username=${credentials.username}&password=${credentials.password}&action=get_account_info`);
+      const response = await axios.get(`${API_BASE}?url=${targetURL}`);
 
       if (response.data && response.data.user_info) {
         // Update credentials with the server port from the response
@@ -106,7 +97,7 @@ class AuthService {
     if (!this.credentials) return null;
     
     const { url, port, username, password } = this.credentials;
-    return `${API_BASE}${url}:${port}/${streamType}/${username}/${password}/${streamId}.${containerExtension}`;
+    return encodeURIComponent(`http://${url}:${port}/${streamType}/${username}/${password}/${streamId}.${containerExtension}`);
   }
 }
 

@@ -13,6 +13,7 @@ import Hls from 'hls.js';
 // import { useAppStore } from '../store/useAppStore';
 import { apiService } from '../services/apiService';
 
+const API_BASE = '/api/proxy';
 interface VideoPlayerProps {
   streamId: string;
   streamType: 'movie' | 'series';
@@ -214,7 +215,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (!streamUrl) throw new Error('Stream URL not available');
 
       // Create download request without credentials
-      const response = await fetch(streamUrl, {
+      const response = await fetch(`${API_BASE}?url=${streamUrl}`, {
         method: 'GET',
         mode: 'cors'
       });
