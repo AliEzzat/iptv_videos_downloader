@@ -36,6 +36,13 @@ export default async function handler(req, res) {
     res.send(Buffer.from(buffer));
   } catch (err) {
     console.error('Proxy error:', err);
-    return res.status(500).json({ error: { code: '500', message: 'Proxy failed' } });
+
+    return res.status(500).json({
+      error: {
+        code: '500',
+        message: 'Proxy failed',
+        details: err.message || err.toString(),
+      },
+    });
   }
 }
