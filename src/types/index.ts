@@ -37,6 +37,22 @@ export interface IPTVCategory {
   parent_id: number;
 }
 
+export interface IPTVLiveStream {
+  num: number;
+  name: string;
+  stream_type: 'live';
+  stream_id: number;
+  stream_icon: string;
+  epg_channel_id: string | null;
+  added: string;
+  is_adult: string;
+  category_id: string;
+  custom_sid: string;
+  tv_archive: number;
+  direct_source: string;
+  tv_archive_duration: number;
+}
+
 export interface IPTVMovie {
   stream_id: string;
   name: string;
@@ -229,13 +245,17 @@ export interface AppState {
   series: IPTVSeries[];
   movieCategories: IPTVCategory[];
   seriesCategories: IPTVCategory[];
+  liveCategories: IPTVCategory[];
   selectedMovie: IPTVMovie | null;
   selectedSeries: IPTVSeries | null;
   selectedSeriesDetail: IPTVSeriesDetail | null;
   selectedSeason: IPTVSeason | null;
   selectedEpisode: IPTVEpisode | null;
-  searchQuery: string;
+  selectedLive: IPTVLiveStream | null;
+  liveStreams: IPTVLiveStream[];
   selectedCategory: string;
+  selectedLiveCategory: string;
+  searchQuery: string;
   isLoading: boolean;
   error: string | null;
 }

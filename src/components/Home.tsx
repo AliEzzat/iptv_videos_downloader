@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Star, Clock } from 'lucide-react';
@@ -19,6 +19,11 @@ const Home: React.FC = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentSection, setCurrentSection] = useState(0);
+  const [currentItem, setCurrentItem] = useState(0);
+  const featuredMoviesRef = useRef<HTMLDivElement>(null);
+  const featuredSeriesRef = useRef<HTMLDivElement>(null);
+  const recentMoviesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMovies();
@@ -51,6 +56,76 @@ const Home: React.FC = () => {
     // Open overlay, keep Home as background
     navigate(`/movies/${movie.stream_id}`, { state: { backgroundLocation: location.pathname } });
   };
+
+  // Remote navigation for home sections
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const sections = [featuredMoviesRef, featuredSeriesRef, recentMoviesRef];
+      const currentRef = sections[currentSection]?.current;
+      if (!currentRef) return;
+
+      const focusable = Array.from(currentRef.querySelectorAll('[data-home-item]')) as HTMLElement[];
+      if (focusable.length === 0) return;
+
+      const columns = 6; // Based on grid layout
+      let nextItem = currentItem;
+      let nextSection = currentSection;
+
+      switch (e.key) {
+        case 'ArrowRight':
+          nextItem = Math.min(focusable.length - 1, currentItem + 1);
+          break;
+        case 'ArrowLeft':
+          nextItem = Math.max(0, currentItem - 1);
+          break;
+        case 'ArrowDown':
+          nextItem = Math.min(focusable.length - 1, currentItem + columns);
+          break;
+        case 'ArrowUp':
+          nextItem = Math.max(0, currentItem - columns);
+          break;
+        case 'ArrowDown':
+          if (currentSection < sections.length - 1) {
+            nextSection = currentSection + 1;
+            nextItem = 0;
+          }
+          break;
+        case 'ArrowUp':
+          if (currentSection > 0) {
+            nextSection = currentSection - 1;
+            nextItem = 0;
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          focusable[currentItem]?.click();
+          return;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      setCurrentSection(nextSection);
+      setCurrentItem(nextItem);
+      
+      const nextRef = sections[nextSection]?.current;
+      if (nextRef) {
+        const nextFocusable = Array.from(nextRef.querySelectorAll('[data-home-item]')) as HTMLElement[];
+        nextFocusable[nextItem]?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentSection, currentItem]);
+
+  // Focus first item when component mounts
+  useEffect(() => {
+    if (featuredMoviesRef.current && featuredMovies.length > 0) {
+      const firstItem = featuredMoviesRef.current.querySelector('[data-home-item]') as HTMLElement;
+      firstItem?.focus();
+    }
+  }, [featuredMovies.length]);
 
   return (
     <div className="p-6 space-y-8">
@@ -101,14 +176,15 @@ const Home: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div ref={featuredMoviesRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {featuredMovies.map((movie) => (
-              <MovieCard
-                key={movie.stream_id}
-                movie={movie}
-                onPlay={handlePlayMovie}
-                onDownload={() => {}}
-              />
+              <div key={movie.stream_id} data-home-item>
+                <MovieCard
+                  movie={movie}
+                  onPlay={handlePlayMovie}
+                  onDownload={() => {}}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -136,14 +212,15 @@ const Home: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div ref={featuredSeriesRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {featuredSeries.map((series) => (
-              <SeriesCard
-                key={series.series_id}
-                series={series}
-                onSelect={handleSelectSeries}
-                onDownload={() => {}}
-              />
+              <div key={series.series_id} data-home-item>
+                <SeriesCard
+                  series={series}
+                  onSelect={handleSelectSeries}
+                  onDownload={() => {}}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -171,14 +248,15 @@ const Home: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <div ref={recentMoviesRef} className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             {recentMovies.map((movie) => (
-              <MovieCard
-                key={movie.stream_id}
-                movie={movie}
-                onPlay={handlePlayMovie}
-                onDownload={() => {}}
-              />
+              <div key={movie.stream_id} data-home-item>
+                <MovieCard
+                  movie={movie}
+                  onPlay={handlePlayMovie}
+                  onDownload={() => {}}
+                />
+              </div>
             ))}
           </div>
         )}

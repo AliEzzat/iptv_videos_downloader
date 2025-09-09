@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import MovieCard from './MovieCard';
 import { Search, Filter, Grid, List, Loader2 } from 'lucide-react';
@@ -26,6 +26,8 @@ const BrowseMovies: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [localSearch, setLocalSearch] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const moviesGridRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -84,6 +86,71 @@ const BrowseMovies: React.FC = () => {
 
   // Check if we have more pages
   const hasMorePages = page * PAGE_SIZE < filteredMovies.length;
+
+  // Remote navigation for movies grid
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!moviesGridRef.current) return;
+      const focusable = Array.from(moviesGridRef.current.querySelectorAll('[data-movie-item]')) as HTMLElement[];
+      if (focusable.length === 0) return;
+      
+      const currentIndex = focusable.findIndex(el => el === document.activeElement);
+      const columns = viewMode === 'grid' ? 6 : 1; // Adjust based on responsive grid
+      let nextIndex = currentIndex;
+      
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+          break;
+        case 'ArrowLeft':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+          break;
+        case 'ArrowDown':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + columns));
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - columns));
+          break;
+        case 'Enter':
+          if (currentIndex >= 0) {
+            e.preventDefault();
+            focusable[currentIndex].click();
+          }
+          return;
+        case 'PageDown':
+          e.preventDefault();
+          if (hasMorePages) {
+            setPage(p => p + 1);
+            setFocusedIndex(0);
+          }
+          return;
+        case 'PageUp':
+          e.preventDefault();
+          if (page > 1) {
+            setPage(p => p - 1);
+            setFocusedIndex(0);
+          }
+          return;
+        default:
+          return;
+      }
+      e.preventDefault();
+      focusable[nextIndex]?.focus();
+      setFocusedIndex(nextIndex);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, hasMorePages, page]);
+
+  // Focus first item when page changes
+  useEffect(() => {
+    if (moviesGridRef.current && paginatedMovies.length > 0) {
+      const firstItem = moviesGridRef.current.querySelector('[data-movie-item]') as HTMLElement;
+      firstItem?.focus();
+      setFocusedIndex(0);
+    }
+  }, [page, paginatedMovies.length]);
 
   return (
     <div className="p-6">
@@ -183,19 +250,21 @@ const BrowseMovies: React.FC = () => {
             </div>
           ) : (
             <div
+              ref={moviesGridRef}
               className={`grid gap-6 ${
                 viewMode === 'grid'
                   ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
                   : 'grid-cols-1'
               }`}
             >
-              {paginatedMovies.map((movie) => (
-                <MovieCard
-                  key={movie.stream_id}
-                  movie={movie}
-                  onPlay={handlePlay}
-                  onDownload={handleDownload}
-                />
+              {paginatedMovies.map((movie, index) => (
+                <div key={movie.stream_id} data-movie-item>
+                  <MovieCard
+                    movie={movie}
+                    onPlay={handlePlay}
+                    onDownload={handleDownload}
+                  />
+                </div>
               ))}
             </div>
           )}

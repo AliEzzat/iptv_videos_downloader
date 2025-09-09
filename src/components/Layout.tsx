@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { 
   Home, 
   Film, 
   Tv,
+  Radio,
   User, 
   LogOut, 
   Menu, 
@@ -19,7 +20,9 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { logout, accountInfo, downloads } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [focusedNavIndex, setFocusedNavIndex] = useState(0);
   const location = useLocation();
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onError = (e: ErrorEvent) => {
@@ -47,7 +50,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Movies', href: '/movies', icon: Film },
-    { name: 'TV Series', href: '/series', icon: Tv }
+    { name: 'TV Series', href: '/series', icon: Tv },
+    { name: 'Live', href: '/live', icon: Radio }
   ];
 
   const isActive = (path: string) => {
@@ -57,6 +61,54 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleLogout = () => {
     logout();
   };
+
+  // Remote navigation for sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!sidebarRef.current) return;
+      const focusable = Array.from(sidebarRef.current.querySelectorAll('[data-nav-item]')) as HTMLElement[];
+      if (focusable.length === 0) return;
+
+      const currentIndex = focusable.findIndex(el => el === document.activeElement);
+      let nextIndex = currentIndex;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+          break;
+        case 'Enter':
+          if (currentIndex >= 0) {
+            e.preventDefault();
+            focusable[currentIndex].click();
+          }
+          return;
+        case 'Menu':
+          e.preventDefault();
+          setSidebarOpen(!sidebarOpen);
+          return;
+        default:
+          return;
+      }
+      e.preventDefault();
+      focusable[nextIndex]?.focus();
+      setFocusedNavIndex(nextIndex);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarOpen]);
+
+  // Focus first nav item when sidebar opens
+  useEffect(() => {
+    if (sidebarOpen && sidebarRef.current) {
+      const firstItem = sidebarRef.current.querySelector('[data-nav-item]') as HTMLElement;
+      firstItem?.focus();
+      setFocusedNavIndex(0);
+    }
+  }, [sidebarOpen]);
 
   return (
     <div className="min-h-screen bg-dark-900">
@@ -74,7 +126,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <X className="w-6 h-6" />
             </button>
           </div>
-          <nav className="mt-4">
+          <nav ref={sidebarRef} className="mt-4">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -82,11 +134,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     isActive(item.href)
                       ? 'bg-primary-600 text-white'
                       : 'text-dark-300 hover:bg-dark-700 hover:text-white'
                   }`}
+                  data-nav-item
+                  tabIndex={0}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
@@ -110,11 +164,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     isActive(item.href)
                       ? 'bg-primary-600 text-white'
                       : 'text-dark-300 hover:bg-dark-700 hover:text-white'
                   }`}
+                  data-nav-item
+                  tabIndex={0}
                 >
                   <Icon className="mr-3 h-5 w-5" />
                   {item.name}

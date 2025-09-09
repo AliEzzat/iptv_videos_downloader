@@ -70,6 +70,15 @@ class ApiService {
     return response.data;
   }
 
+  async getLiveCategories(): Promise<IPTVCategory[]> {
+    const apiUrl = this.getApiUrl();
+    const params = this.getApiParams();
+    const response = await axios.get(`${apiUrl}/player_api.php`, {
+      params: { ...params, action: 'get_live_categories' },
+    });
+    return response.data;
+  }
+
   async getMovies(categoryId?: string): Promise<IPTVMovie[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
@@ -109,6 +118,15 @@ class ApiService {
     if (response.data && !Array.isArray(response.data)) {
       return Object.values(response.data);
     }
+    return response.data;
+  }
+
+  async getLiveStreams(categoryId?: string) {
+    const apiUrl = this.getApiUrl();
+    const params = this.getApiParams();
+    const requestParams: any = { ...params, action: 'get_live_streams' };
+    if (categoryId) requestParams.category_id = categoryId;
+    const response = await axios.get(`${apiUrl}/player_api.php`, { params: requestParams });
     return response.data;
   }
 
@@ -189,7 +207,7 @@ class ApiService {
     return response.data;
   }
 
-  getStreamUrl(streamId: string, streamType: 'movie' | 'series' = 'movie', containerExtension: string = 'mkv'): string | null {
+  getStreamUrl(streamId: string, streamType: 'movie' | 'series' | 'live' = 'movie', containerExtension: string = 'mkv'): string | null {
     return authService.getStreamUrl(streamId, streamType, containerExtension);
   }
 

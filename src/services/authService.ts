@@ -101,11 +101,14 @@ class AuthService {
     return this.api;
   }
 
-  getStreamUrl(streamId: string, streamType: 'movie' | 'series' = 'movie', containerExtension: string = 'mkv'): string | null {
+  getStreamUrl(streamId: string, streamType: 'movie' | 'series' | 'live' = 'movie', containerExtension: string = 'mkv'): string | null {
     if (!this.credentials) return null;
     
     const { url, port, username, password } = this.credentials;
-    return `http://${url}:${port}/${streamType}/${username}/${password}/${streamId}.${containerExtension}`;
+    const pathSegment = streamType === 'live' ? 'live' : streamType;
+    // Default extension for live streams is ts unless explicitly provided
+    const ext = streamType === 'live' && (!containerExtension || containerExtension === 'mkv') ? 'ts' : containerExtension;
+    return `http://${url}:${port}/${pathSegment}/${username}/${password}/${streamId}.${ext}`;
   }
 }
 

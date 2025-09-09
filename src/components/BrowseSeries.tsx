@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import SeriesCard from './SeriesCard';
@@ -26,6 +26,8 @@ const BrowseSeries: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [localSearch, setLocalSearch] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const seriesGridRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,6 +83,71 @@ const BrowseSeries: React.FC = () => {
   }, [filteredSeries, page]);
 
   const hasMorePages = page * PAGE_SIZE < filteredSeries.length;
+
+  // Remote navigation for series grid
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!seriesGridRef.current) return;
+      const focusable = Array.from(seriesGridRef.current.querySelectorAll('[data-series-item]')) as HTMLElement[];
+      if (focusable.length === 0) return;
+      
+      const currentIndex = focusable.findIndex(el => el === document.activeElement);
+      const columns = viewMode === 'grid' ? 6 : 1; // Adjust based on responsive grid
+      let nextIndex = currentIndex;
+      
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+          break;
+        case 'ArrowLeft':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+          break;
+        case 'ArrowDown':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + columns));
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - columns));
+          break;
+        case 'Enter':
+          if (currentIndex >= 0) {
+            e.preventDefault();
+            focusable[currentIndex].click();
+          }
+          return;
+        case 'PageDown':
+          e.preventDefault();
+          if (hasMorePages) {
+            setPage(p => p + 1);
+            setFocusedIndex(0);
+          }
+          return;
+        case 'PageUp':
+          e.preventDefault();
+          if (page > 1) {
+            setPage(p => p - 1);
+            setFocusedIndex(0);
+          }
+          return;
+        default:
+          return;
+      }
+      e.preventDefault();
+      focusable[nextIndex]?.focus();
+      setFocusedIndex(nextIndex);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, hasMorePages, page]);
+
+  // Focus first item when page changes
+  useEffect(() => {
+    if (seriesGridRef.current && paginatedSeries.length > 0) {
+      const firstItem = seriesGridRef.current.querySelector('[data-series-item]') as HTMLElement;
+      firstItem?.focus();
+      setFocusedIndex(0);
+    }
+  }, [page, paginatedSeries.length]);
 
   return (
     <div className="p-6">
@@ -179,6 +246,7 @@ const BrowseSeries: React.FC = () => {
             </div>
           ) : (
             <div
+              ref={seriesGridRef}
               className={`grid gap-6 ${
                 viewMode === 'grid'
                   ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
@@ -186,12 +254,13 @@ const BrowseSeries: React.FC = () => {
               }`}
             >
               {paginatedSeries.map(seriesItem => (
-                <SeriesCard
-                  key={seriesItem.series_id}
-                  series={seriesItem}
-                  onSelect={handleSelectSeries}
-                  onDownload={handleDownload}
-                />
+                <div key={seriesItem.series_id} data-series-item>
+                  <SeriesCard
+                    series={seriesItem}
+                    onSelect={handleSelectSeries}
+                    onDownload={handleDownload}
+                  />
+                </div>
               ))}
             </div>
           )}

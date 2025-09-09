@@ -8,7 +8,9 @@ import {
   type IPTVSeriesDetail,
   type IPTVSeason, 
   type IPTVEpisode,
-  type DownloadProgress 
+  type DownloadProgress,
+  type IPTVCategory,
+  type IPTVLiveStream
 } from '../types';
 import { authService } from '../services/authService';
 import { apiService } from '../services/apiService';
@@ -64,13 +66,17 @@ export const useAppStore = create<AppStore>()(
       series: [], // Now array of new IPTVSeries type
       movieCategories: [],
       seriesCategories: [],
+      liveCategories: [],
       selectedMovie: null,
       selectedSeries: null,
+      selectedLive: null,
       selectedSeriesDetail: null,
       selectedSeason: null,
       selectedEpisode: null,
+      liveStreams: [],
       searchQuery: '',
       selectedCategory: '',
+      selectedLiveCategory: '',
       isLoading: false,
       error: null,
       downloads: [],
@@ -105,12 +111,15 @@ export const useAppStore = create<AppStore>()(
           series: [],
           movieCategories: [],
           seriesCategories: [],
+          liveCategories: [],
           selectedMovie: null,
           selectedSeries: null,
+          selectedLive: null,
           selectedSeason: null,
           selectedEpisode: null,
           searchQuery: '',
           selectedCategory: '',
+          selectedLiveCategory: '',
           error: null,
         });
       },
@@ -177,6 +186,17 @@ export const useAppStore = create<AppStore>()(
         }
       },
 
+      loadLiveCategories: async () => {
+        try {
+          const liveCategories: IPTVCategory[] = await apiService.getLiveCategories();
+          set({ liveCategories });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to load live categories',
+          });
+        }
+      },
+
       // Selection actions
       selectMovie: (movie: IPTVMovie | null) => {
         set({ selectedMovie: movie });
@@ -184,6 +204,10 @@ export const useAppStore = create<AppStore>()(
 
       selectSeries: (series: IPTVSeries | null) => {
         set({ selectedSeries: series });
+      },
+
+      selectLive: (live: IPTVLiveStream | null) => {
+        set({ selectedLive: live });
       },
 
       selectSeriesDetail: (seriesDetail: IPTVSeriesDetail | null) => {
@@ -231,6 +255,10 @@ export const useAppStore = create<AppStore>()(
         set({ selectedCategory: categoryId });
       },
 
+      setSelectedLiveCategory: (categoryId: string) => {
+        set({ selectedLiveCategory: categoryId });
+      },
+
       searchMovies: async (query: string) => {
         set({ isLoading: true, error: null });
         try {
@@ -252,6 +280,19 @@ export const useAppStore = create<AppStore>()(
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Search failed',
+            isLoading: false,
+          });
+        }
+      },
+
+      loadLiveStreams: async (categoryId?: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const liveStreams: IPTVLiveStream[] = await apiService.getLiveStreams(categoryId);
+          set({ liveStreams, isLoading: false });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to load live streams',
             isLoading: false,
           });
         }

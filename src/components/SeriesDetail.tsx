@@ -3,6 +3,7 @@ import { ArrowLeft, Play, Calendar, Clock, Star, Users, Film, Download } from 'l
 import { useAppStore } from '../store/useAppStore';
 import { type IPTVEpisode } from '../types';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LazyLoadImage } from 'react-lazy-load-image-component';
 
 interface SeriesDetailProps {
   onClose: () => void;
@@ -19,7 +20,9 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
   } = useAppStore();
   
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [focusedSeasonIndex, setFocusedSeasonIndex] = useState(0);
   const episodeListRef = useRef<HTMLDivElement>(null);
+  const seasonsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -37,34 +40,100 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
     navigate(`/series/${seriesId}/episodes/${episode.id}`, { state: { backgroundLocation: location.pathname } });
   };
 
-  // Remote navigation for episodes grid
+  // Remote navigation for seasons and episodes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!episodeListRef.current) return;
-      const focusable = Array.from(episodeListRef.current.querySelectorAll('[data-episode-item]')) as HTMLElement[];
-      if (focusable.length === 0) return;
-      const currentIndex = focusable.findIndex(el => el === document.activeElement);
-      const columns = 4;
-      let nextIndex = currentIndex;
-      switch (e.key) {
-        case 'ArrowRight':
-          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
-          break;
-        case 'ArrowLeft':
-          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
-          break;
-        case 'ArrowDown':
-          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + columns));
-          break;
-        case 'ArrowUp':
-          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - columns));
-          break;
-        case 'Enter':
-          if (currentIndex >= 0) {
+      // Check if we're in seasons area
+      if (seasonsRef.current?.contains(document.activeElement)) {
+        const seasonButtons = Array.from(seasonsRef.current.querySelectorAll('[data-season-item]')) as HTMLElement[];
+        if (seasonButtons.length === 0) return;
+        
+        const currentIndex = seasonButtons.findIndex(el => el === document.activeElement);
+        let nextIndex = currentIndex;
+        
+        switch (e.key) {
+          case 'ArrowRight':
+            nextIndex = Math.min(seasonButtons.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+            break;
+          case 'ArrowLeft':
+            nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+            break;
+          case 'Enter':
+            if (currentIndex >= 0) {
+              e.preventDefault();
+              seasonButtons[currentIndex].click();
+            }
+            return;
+          case 'ArrowDown':
+            // Move to episodes
+            if (episodeListRef.current) {
+              const firstEpisode = episodeListRef.current.querySelector('[data-episode-item]') as HTMLElement;
+              firstEpisode?.focus();
+            }
+            return;
+          case 'Backspace':
+          case 'Escape':
             e.preventDefault();
-            focusable[currentIndex].click();
-          }
-          return;
+            onClose();
+            return;
+          default:
+            return;
+        }
+        e.preventDefault();
+        seasonButtons[nextIndex]?.focus();
+        setFocusedSeasonIndex(nextIndex);
+        return;
+      }
+
+      // Check if we're in episodes area
+      if (episodeListRef.current?.contains(document.activeElement)) {
+        const focusable = Array.from(episodeListRef.current.querySelectorAll('[data-episode-item]')) as HTMLElement[];
+        if (focusable.length === 0) return;
+        const currentIndex = focusable.findIndex(el => el === document.activeElement);
+        const columns = 4;
+        let nextIndex = currentIndex;
+        
+        switch (e.key) {
+          case 'ArrowRight':
+            nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+            break;
+          case 'ArrowLeft':
+            nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+            break;
+          case 'ArrowDown':
+            nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + columns));
+            break;
+          case 'ArrowUp':
+            nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - columns));
+            break;
+          case 'Enter':
+            if (currentIndex >= 0) {
+              e.preventDefault();
+              focusable[currentIndex].click();
+            }
+            return;
+          case 'ArrowUp':
+            // Move to seasons
+            if (seasonsRef.current) {
+              const seasonButtons = Array.from(seasonsRef.current.querySelectorAll('[data-season-item]')) as HTMLElement[];
+              seasonButtons[focusedSeasonIndex]?.focus();
+            }
+            return;
+          case 'Backspace':
+          case 'Escape':
+            e.preventDefault();
+            onClose();
+            return;
+          default:
+            return;
+        }
+        e.preventDefault();
+        focusable[nextIndex]?.focus();
+        return;
+      }
+
+      // Default navigation
+      switch (e.key) {
         case 'Backspace':
         case 'Escape':
           e.preventDefault();
@@ -73,12 +142,10 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
         default:
           return;
       }
-      e.preventDefault();
-      focusable[nextIndex]?.focus();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, focusedSeasonIndex]);
 
   if (!selectedSeries || !selectedSeriesDetail) {
     return (
@@ -166,16 +233,18 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
           {/* Season Selector */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">Seasons</h2>
-            <div className="flex flex-wrap gap-2">
+            <div ref={seasonsRef} className="flex flex-wrap gap-2">
               {Object.keys(episodes).map((seasonNum) => (
                 <button
                   key={seasonNum}
                   onClick={() => setSelectedSeason(parseInt(seasonNum))}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     selectedSeason === parseInt(seasonNum)
                       ? 'bg-primary-600 text-white'
                       : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
                   }`}
+                  data-season-item
+                  tabIndex={0}
                 >
                   Season {seasonNum}
                 </button>
@@ -204,7 +273,23 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
                     data-episode-item
           >
                     <div className="aspect-video bg-dark-700 flex items-center justify-center">
-                      <Play className="w-12 h-12 text-white opacity-70 group-hover:opacity-100 transition-opacity" />
+                      {info.cover ? (
+                        <LazyLoadImage
+                          src={info.cover}
+                          alt={episode.title}
+                          effect="blur"
+                          threshold={100}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-movie.jpg';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-dark-700 flex items-center justify-center">
+                          <Play className="w-12 h-12 text-white opacity-70 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      )}
                     </div>
                     
                     <div className="p-4">

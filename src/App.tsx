@@ -7,11 +7,12 @@ import Home from './components/Home';
 import VideoPlayer from './components/VideoPlayer';
 import BrowseMovies from './components/BrowseMovies';
 import BrowseSeries from './components/BrowseSeries';
+import BrowseLive from './components/BrowseLive';
 import SeriesDetail from './components/SeriesDetail';
 
 function VideoOverlay() {
   const navigate = useNavigate();
-  const { movieId, seriesId, episodeId } = useParams();
+  const { movieId, seriesId, episodeId, liveId } = useParams();
 
   const handleClose = () => {
     if (seriesId && episodeId) {
@@ -41,6 +42,16 @@ function VideoOverlay() {
       />
     );
   }
+  if (liveId) {
+    return (
+      <VideoPlayer
+        streamId={liveId}
+        streamType="live"
+        title={`Live Channel ${liveId}`}
+        onClose={handleClose}
+      />
+    );
+  }
   return null;
 }
 
@@ -58,16 +69,19 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/movies" element={<BrowseMovies />} />
         <Route path="/series" element={<BrowseSeries />} />
+        <Route path="/live" element={<BrowseLive />} />
         <Route path="/series/:seriesId" element={<SeriesDetail onClose={handleClose}/>} />
         <Route path="/search" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {/* Overlay: only render when overlay route matches */}
       {(location.pathname.match(/^\/movies\/[^/]+$/) ||
-        location.pathname.match(/^\/series\/[^/]+\/episodes\/[^/]+$/)) && (
+        location.pathname.match(/^\/series\/[^/]+\/episodes\/[^/]+$/) ||
+        location.pathname.match(/^\/live\/[^/]+$/)) && (
         <Routes>
           <Route path="/movies/:movieId" element={<VideoOverlay />} />
           <Route path="/series/:seriesId/episodes/:episodeId" element={<VideoOverlay />} />
+          <Route path="/live/:liveId" element={<VideoOverlay />} />
         </Routes>
       )}
     </>

@@ -15,7 +15,7 @@ import { apiService } from '../services/apiService';
 
 interface VideoPlayerProps {
   streamId: string;
-  streamType: 'movie' | 'series';
+  streamType: 'movie' | 'series' | 'live';
   title: string;
   containerExtension?: string;
   onClose?: () => void;
@@ -36,7 +36,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
@@ -47,11 +46,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // const { addDownload } = useAppStore();
 
+  const hlsRef = useRef<Hls | null>(null);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const streamUrl = apiService.getStreamUrl(streamId, streamType, containerExtension);
+    const effectiveExt = streamType === 'live' ? 'ts' : (containerExtension || 'mkv');
+    const streamUrl = apiService.getStreamUrl(streamId, streamType, effectiveExt);
     if (!streamUrl) {
       setError('Stream URL not available');
       setIsLoading(false);
@@ -63,11 +65,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.autoplay = true;
     video.playsInline = true;
 
-    if (streamUrl.endsWith('.m3u8') && Hls.isSupported()) {
-      const hls = new Hls();
+    if ((streamUrl.endsWith('.m3u8') || streamType === 'live') && Hls.isSupported()) {
+      const hls = new Hls({
+        liveSyncDurationCount: 3,
+        enableWorker: true,
+        backBufferLength: 0,
+        lowLatencyMode: true,
+      });
+      hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
-      return () => hls.destroy();
+      return () => {
+        hlsRef.current = null;
+        hls.destroy();
+      };
     } else {
       video.src = streamUrl;
     }
@@ -75,16 +86,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleLoadedMetadata = () => {
       setIsLoading(false);
       setError(null);
-      // Try to enter fullscreen immediately when metadata is loaded
-      try {
-        if (video.requestFullscreen) {
-          video.requestFullscreen();
-        } else if ((video as any).webkitRequestFullscreen) {
-          (video as any).webkitRequestFullscreen();
-        }
-      } catch (_) {
-        // ignore
-      }
     };
 
     const handleError = () => {
@@ -97,11 +98,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
 
     const handleSeeking = () => {
-      setIsLoading(true);
+      if (streamType !== 'live') {
+        setIsLoading(true);
+      }
     };
 
     const handleSeeked = () => {
-      setIsLoading(false);
+      if (streamType !== 'live') {
+        setIsLoading(false);
+      }
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -149,7 +154,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     };
   }, [streamId, streamType, containerExtension]);
-
+  
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -179,6 +184,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const video = videoRef.current;
     if (!video) return;
+    if (streamType === 'live') return; // disable seek on live
 
     const time = parseFloat(e.target.value);
     video.currentTime = time;
@@ -203,21 +209,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(video.muted);
   };
 
-  const toggleFullscreen = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (!document.fullscreenElement) {
-      if (video.requestFullscreen) video.requestFullscreen();
-      else if ((video as any).webkitRequestFullscreen) (video as any).webkitRequestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
   // Remote control key handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -240,11 +231,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          video.currentTime = Math.max(0, video.currentTime - 10);
+          if (streamType !== 'live') {
+            video.currentTime = Math.max(0, video.currentTime - 10);
+          }
           break;
         case 'ArrowRight':
           e.preventDefault();
-          video.currentTime = Math.min(video.duration || video.currentTime + 10, video.currentTime + 10);
+          if (streamType !== 'live') {
+            video.currentTime = Math.min(video.duration || video.currentTime + 10, video.currentTime + 10);
+          } else {
+            // jump to live edge if possible
+            try { hlsRef.current?.seekToLivePosition?.(); } catch (_) {}
+          }
           break;
         case 'ArrowUp':
           e.preventDefault();
@@ -361,6 +359,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const currentIndex = aspectRatioOptions.findIndex(option => option.value === aspectRatio);
     const nextIndex = (currentIndex + 1) % aspectRatioOptions.length;
     setAspectRatio(aspectRatioOptions[nextIndex].value);
+    const video = videoRef.current;
+    if (!video) return;
+    video.style.aspectRatio = aspectRatioOptions[nextIndex].value;
   };
 
   const getVideoStyle = () => {
@@ -438,21 +439,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {showControls && (
         <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300"
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-8 transition-opacity duration-300"
           onClick={e => e.stopPropagation()}
         >
-          <div className="video-controls grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
-            <button 
-              className="touch-none p-4 sm:p-2" 
-              onClick={togglePlay}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
-            </button>
-
-            <div className="flex-1 flex items-center space-x-4 mb-4">
-              <span className="text-white text-sm">{formatTime(currentTime)}</span>
-
+          <div className="video-controls space-y-6">
+            {/* Progress Bar */}
+            <div className="flex items-center space-x-6">
+              <span className="text-white text-xl font-mono min-w-[80px]">{formatTime(currentTime)}</span>
+              
               <div className="flex-1 relative">
                 <input
                   type="range"
@@ -460,64 +454,72 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   max={duration || 0}
                   value={currentTime}
                   onChange={handleSeek}
-                  className="w-full h-1 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                  className="w-full h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(currentTime / duration) * 100}%, #4b5563 ${(currentTime / duration) * 100}%, #4b5563 100%)`
+                  }}
                 />
                 <div
-                  className="absolute top-0 h-1 bg-primary-500 rounded-lg pointer-events-none"
+                  className="absolute top-0 h-3 bg-blue-400 rounded-lg pointer-events-none opacity-60"
                   style={{ width: `${buffered ? (buffered / duration) * 100 : 0}%` }}
                 />
               </div>
-
-              <span className="text-white text-sm">{formatTime(duration)}</span>
+              
+              <span className="text-white text-xl font-mono min-w-[80px]">{formatTime(duration)}</span>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={toggleMute}
-                className="text-white hover:text-primary-400 transition-colors"
+            {/* Control Buttons */}
+            <div className="flex items-center justify-center space-x-8">
+              <button 
+                className="bg-primary-600 hover:bg-primary-700 text-white p-6 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary-400" 
+                onClick={togglePlay}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
               >
-                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                {isPlaying ? <Pause className="w-12 h-12" /> : <Play className="w-12 h-12" />}
               </button>
 
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="w-20 h-1 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
-              />
+              <button
+                onClick={toggleMute}
+                className="bg-dark-700 hover:bg-dark-600 text-white p-4 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary-400"
+              >
+                {isMuted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
+              </button>
+
+              <div className="flex items-center space-x-4">
+                <span className="text-white text-lg">Volume</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="w-32 h-3 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                />
+              </div>
 
               <button
                 onClick={handleDownload}
-                className="text-white hover:text-primary-400 transition-colors"
+                className="bg-dark-700 hover:bg-dark-600 text-white p-4 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary-400"
                 title="Download video"
               >
-                <Download className="w-6 h-6" />
+                <Download className="w-8 h-8" />
               </button>
 
               <button
                 onClick={cycleAspectRatio}
-                className="text-white hover:text-primary-400 transition-colors"
+                className="bg-dark-700 hover:bg-dark-600 text-white p-4 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary-400"
                 title={`Aspect Ratio: ${aspectRatioOptions.find(opt => opt.value === aspectRatio)?.label} (Press R)`}
               >
-                <span className="text-xs font-bold">AR</span>
-              </button>
-
-              <button
-                onClick={toggleFullscreen}
-                className="text-white hover:text-primary-400 transition-colors"
-              >
-                <Maximize className="w-6 h-6" />
+                <span className="text-lg font-bold">AR</span>
               </button>
 
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="text-white hover:text-primary-400 transition-colors ml-2"
+                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-400"
                 >
-                  ✕
+                  <span className="text-xl font-bold">✕</span>
                 </button>
               )}
             </div>
@@ -541,7 +543,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Aspect Ratio Indicator */}
       {showControls && (
-        <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded text-sm">
+        <div className="absolute top-6 right-6 bg-black/80 text-white px-6 py-3 rounded-lg text-xl font-semibold border border-white/20">
           {aspectRatioOptions.find(opt => opt.value === aspectRatio)?.label}
         </div>
       )}
