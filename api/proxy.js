@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     targetUrl = decodeURIComponent(rawUrl);
     if(targetUrl.includes("get_account_info")){
-      return res.status(200).json({ status: 'ok', data: {
+      return res.status(200).json({
   "user_info": {
     "username": "aliezzat",
     "password": "36622511",
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     "time_now": "2025-09-09 03:09:04",
     "process": true
   }
-}}); 
+}); 
     }
     const urlObj = new URL(targetUrl);
     const hostPort = `${urlObj.hostname}:${urlObj.port}`;
