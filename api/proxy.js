@@ -12,6 +12,9 @@ export default async function handler(req, res) {
   let targetUrl;
   try {
     targetUrl = decodeURIComponent(rawUrl);
+    if(targetUrl.includes("get_account_info")){
+      return res.status(200).json({ status: 'ok', data: {"username":"aliezzat","password":"36622511","message":"","auth":1,"status":"Active","exp_date":"1785793040","is_trial":"0","active_cons":"1","created_at":"1722708363","max_connections":"1","allowed_output_formats":["m3u8","ts","rtmp"]},"server_info":{"url":"lionzhd.com","port":"2095","https_port":"2096","server_protocol":"http","rtmp_port":"25462","timezone":"Asia\/Kuwait","timestamp_now":1757373753,"time_now":"2025-09-09 02:22:33","process":true}}); 
+    }
     const urlObj = new URL(targetUrl);
     const hostPort = `${urlObj.hostname}:${urlObj.port}`;
     if (!ALLOWED_HOSTS.includes(hostPort)) {
