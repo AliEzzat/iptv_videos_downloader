@@ -1,14 +1,13 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Suspense } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Home from './components/Home';
 import VideoPlayer from './components/VideoPlayer';
-
-const BrowseMovies = lazy(() => import('./components/BrowseMovies'));
-const BrowseSeries = lazy(() => import('./components/BrowseSeries'));
-const SeriesDetail = lazy(() => import('./components/SeriesDetail'));
+import BrowseMovies from './components/BrowseMovies';
+import BrowseSeries from './components/BrowseSeries';
+import SeriesDetail from './components/SeriesDetail';
 
 function VideoOverlay() {
   const navigate = useNavigate();
@@ -86,9 +85,7 @@ function App() {
     <Router>
       <div className="App">
         <Layout>
-          <Suspense fallback={<div>Loading...</div>}>
-            <AppRoutes />
-          </Suspense>
+          <AppRoutes />
         </Layout>
       </div>
     </Router>

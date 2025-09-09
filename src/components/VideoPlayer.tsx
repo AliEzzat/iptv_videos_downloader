@@ -43,6 +43,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [buffered, setBuffered] = useState(0);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<string>('contain');
 
   // const { addDownload } = useAppStore();
 
@@ -74,6 +75,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleLoadedMetadata = () => {
       setIsLoading(false);
       setError(null);
+      // Try to enter fullscreen immediately when metadata is loaded
+      try {
+        if (video.requestFullscreen) {
+          video.requestFullscreen();
+        } else if ((video as any).webkitRequestFullscreen) {
+          (video as any).webkitRequestFullscreen();
+        }
+      } catch (_) {
+        // ignore
+      }
     };
 
     const handleError = () => {
@@ -197,13 +208,74 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!video) return;
 
     if (!document.fullscreenElement) {
-      video.requestFullscreen();
+      if (video.requestFullscreen) video.requestFullscreen();
+      else if ((video as any).webkitRequestFullscreen) (video as any).webkitRequestFullscreen();
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
       setIsFullscreen(false);
     }
   };
+
+  // Remote control key handling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const video = videoRef.current;
+      if (!video) return;
+      setShowControls(true);
+      if (hideControlsTimer.current) {
+        clearTimeout(hideControlsTimer.current);
+      }
+      hideControlsTimer.current = window.setTimeout(() => setShowControls(false), 3000);
+
+      switch (e.key) {
+        case 'Enter': // OK
+          e.preventDefault();
+          togglePlay();
+          break;
+        case ' ': // space
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          video.currentTime = Math.max(0, video.currentTime - 10);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          video.currentTime = Math.min(video.duration || video.currentTime + 10, video.currentTime + 10);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          video.volume = Math.min(1, video.volume + 0.1);
+          setVolume(video.volume);
+          setIsMuted(video.volume === 0);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          video.volume = Math.max(0, video.volume - 0.1);
+          setVolume(video.volume);
+          setIsMuted(video.volume === 0);
+          break;
+        case 'Backspace':
+        case 'Escape':
+          e.preventDefault();
+          if (onClose) onClose();
+          else window.history.back();
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          cycleAspectRatio();
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleDownload = async () => {
     try {
@@ -276,6 +348,40 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const aspectRatioOptions = [
+    { value: 'contain', label: 'Fit Screen' },
+    { value: 'cover', label: 'Fill Screen' },
+    { value: '16/9', label: '16:9' },
+    { value: '4/3', label: '4:3' },
+    { value: '21/9', label: '21:9' },
+    { value: '1/1', label: 'Square' }
+  ];
+
+  const cycleAspectRatio = () => {
+    const currentIndex = aspectRatioOptions.findIndex(option => option.value === aspectRatio);
+    const nextIndex = (currentIndex + 1) % aspectRatioOptions.length;
+    setAspectRatio(aspectRatioOptions[nextIndex].value);
+  };
+
+  const getVideoStyle = () => {
+    switch (aspectRatio) {
+      case 'contain':
+        return { objectFit: 'contain' as const };
+      case 'cover':
+        return { objectFit: 'cover' as const };
+      case '16/9':
+        return { objectFit: 'contain' as const, aspectRatio: '16/9' };
+      case '4/3':
+        return { objectFit: 'contain' as const, aspectRatio: '4/3' };
+      case '21/9':
+        return { objectFit: 'contain' as const, aspectRatio: '21/9' };
+      case '1/1':
+        return { objectFit: 'contain' as const, aspectRatio: '1/1' };
+      default:
+        return { objectFit: 'contain' as const };
+    }
+  };
+
   const handleMouseMove = () => {
     setShowControls(true);
 
@@ -312,12 +418,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <div
       className="fixed inset-0 bg-black z-50"
       onMouseMove={handleMouseMove}
-      onClick={togglePlay}
-      style={{ cursor: isPlaying ? 'pointer' : 'pointer' }}
+      style={{ cursor: 'default' }}
+      tabIndex={0}
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="w-full h-full"
+        style={getVideoStyle()}
       />
 
       {isLoading && (
@@ -391,6 +498,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </button>
 
               <button
+                onClick={cycleAspectRatio}
+                className="text-white hover:text-primary-400 transition-colors"
+                title={`Aspect Ratio: ${aspectRatioOptions.find(opt => opt.value === aspectRatio)?.label} (Press R)`}
+              >
+                <span className="text-xs font-bold">AR</span>
+              </button>
+
+              <button
                 onClick={toggleFullscreen}
                 className="text-white hover:text-primary-400 transition-colors"
               >
@@ -421,6 +536,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               style={{ width: `${downloadProgress || 0}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {/* Aspect Ratio Indicator */}
+      {showControls && (
+        <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded text-sm">
+          {aspectRatioOptions.find(opt => opt.value === aspectRatio)?.label}
         </div>
       )}
     </div>

@@ -22,7 +22,16 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onPlay, onDownload }) => {
   };
 
   return (
-    <div className="group relative bg-dark-800 rounded-xl overflow-hidden shadow transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.03]">
+    <div
+      className="group relative bg-dark-800 rounded-xl overflow-hidden shadow transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-primary-500"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onPlay(movie);
+        }
+      }}
+    >
       <div className="aspect-[3/4] relative overflow-hidden">
         {movie.stream_icon ? (
           <LazyLoadImage

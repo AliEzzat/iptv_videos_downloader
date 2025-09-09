@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { 
@@ -21,6 +21,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      const message = `Runtime error: ${e.message}`;
+      const el = document.getElementById('error-log');
+      if (el) el.textContent = message;
+      // eslint-disable-next-line no-console
+      console.log(message);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const message = `Unhandled rejection: ${String(e.reason)}`;
+      const el = document.getElementById('error-log');
+      if (el) el.textContent = message;
+      // eslint-disable-next-line no-console
+      console.log(message);
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection as any);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection as any);
+    };
+  }, []);
+
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Movies', href: '/movies', icon: Film },
@@ -37,6 +60,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-dark-900">
+      <div id="error-log" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, color: '#f87171', background: 'rgba(0,0,0,0.6)', fontSize: 12, padding: 4, zIndex: 9999 }} />
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />

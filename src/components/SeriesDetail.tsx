@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ArrowLeft, Play, Calendar, Clock, Star, Users, Film, Download } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { type IPTVEpisode } from '../types';
@@ -19,6 +19,7 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
   } = useAppStore();
   
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const episodeListRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,6 +36,49 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
     selectEpisode(episode);
     navigate(`/series/${seriesId}/episodes/${episode.id}`, { state: { backgroundLocation: location.pathname } });
   };
+
+  // Remote navigation for episodes grid
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!episodeListRef.current) return;
+      const focusable = Array.from(episodeListRef.current.querySelectorAll('[data-episode-item]')) as HTMLElement[];
+      if (focusable.length === 0) return;
+      const currentIndex = focusable.findIndex(el => el === document.activeElement);
+      const columns = 4;
+      let nextIndex = currentIndex;
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + 1));
+          break;
+        case 'ArrowLeft':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - 1));
+          break;
+        case 'ArrowDown':
+          nextIndex = Math.min(focusable.length - 1, (currentIndex === -1 ? 0 : currentIndex + columns));
+          break;
+        case 'ArrowUp':
+          nextIndex = Math.max(0, (currentIndex === -1 ? 0 : currentIndex - columns));
+          break;
+        case 'Enter':
+          if (currentIndex >= 0) {
+            e.preventDefault();
+            focusable[currentIndex].click();
+          }
+          return;
+        case 'Backspace':
+        case 'Escape':
+          e.preventDefault();
+          onClose();
+          return;
+        default:
+          return;
+      }
+      e.preventDefault();
+      focusable[nextIndex]?.focus();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   if (!selectedSeries || !selectedSeriesDetail) {
     return (
@@ -150,12 +194,14 @@ const SeriesDetail: React.FC<SeriesDetailProps> = ({ onClose }) => {
             ) : seasonEpisodes.length === 0 ? (
               <div className="text-dark-300">No episodes available for this season.</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" ref={episodeListRef}>
                 {seasonEpisodes.map((episode) => (
           <div
             key={episode.id}
-                    className="bg-dark-800 rounded-lg overflow-hidden hover:bg-dark-700 transition-colors cursor-pointer group"
+                    className="bg-dark-800 rounded-lg overflow-hidden hover:bg-dark-700 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary-500"
                     onClick={() => handlePlayEpisode(episode)}
+                    tabIndex={0}
+                    data-episode-item
           >
                     <div className="aspect-video bg-dark-700 flex items-center justify-center">
                       <Play className="w-12 h-12 text-white opacity-70 group-hover:opacity-100 transition-opacity" />

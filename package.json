@@ -7,12 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "webos:package": "vite build && ares-package --no-minify dist -o dist",
+    "webos:install": "ares-install --device LGTV dist/com.aliezzat.iptvvideosdownloader_1.0.0_all.ipk",
+    "webos:launch": "ares-launch --device LGTV com.aliezzat.iptvvideosdownloader"
   },
   "dependencies": {
     "@types/react-lazy-load-image-component": "^1.6.4",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.11.0",
+    "core-js": "^3.38.1",
     "file-saver": "^2.0.5",
     "hls.js": "^1.6.11",
     "lucide-react": "^0.542.0",
@@ -20,6 +24,7 @@
     "react-dom": "^19.1.1",
     "react-lazy-load-image-component": "^1.6.3",
     "react-router-dom": "^7.8.2",
+    "whatwg-fetch": "^3.6.20",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -27,6 +32,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-legacy": "^6.1.1",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.33.0",
@@ -35,6 +41,7 @@
     "globals": "^16.3.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.0",
+    "terser": "^5.44.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2"

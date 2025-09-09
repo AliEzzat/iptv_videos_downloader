@@ -1,0 +1,13 @@
+{
+  "id": "com.aliezzat.iptvvideosdownloader",
+  "version": "1.0.0",
+  "vendor": "ALi Ezzat",
+  "type": "web",
+  "main": "index.html",
+  "title": "ZoZ IPTV",
+  "icon": "icon.png",
+  "bgColor": "#000000",
+  "requiredPermissions": [
+    "internet"
+  ]
+}
