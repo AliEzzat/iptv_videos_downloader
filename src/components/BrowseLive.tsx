@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 
 const BrowseLive: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const {
     liveCategories,
     liveStreams,
@@ -77,7 +80,7 @@ const BrowseLive: React.FC = () => {
           const selectedStream = liveStreams[startIndex + focusedIndex];
           if (selectedStream) {
             selectLive(selectedStream);
-            window.location.href = `#/live/${selectedStream.stream_id}`;
+            navigate(`/live/${selectedStream.stream_id}`, { state: { backgroundLocation: location.pathname } });
           }
           break;
         case 'PageUp':
@@ -105,7 +108,7 @@ const BrowseLive: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedIndex, currentPage, liveStreams, selectLive]);
+  }, [focusedIndex, currentPage, liveStreams, selectLive, navigate, location]);
 
   useEffect(() => {
     if (streamRefs.current[focusedIndex]) {
@@ -195,7 +198,7 @@ const BrowseLive: React.FC = () => {
                 data-live-item
                 onClick={() => {
                   selectLive(stream);
-                  window.location.href = `#/live/${stream.stream_id}`;
+                  navigate(`/live/${stream.stream_id}`, { state: { backgroundLocation: location.pathname } });
                 }}
               >
                 <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">

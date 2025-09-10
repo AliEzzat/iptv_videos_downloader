@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { authService } from './authService';
-import { 
-  type IPTVMovie, 
-  type IPTVSeries, 
+import {
+  type IPTVMovie,
+  type IPTVSeries,
   type IPTVSeriesDetail,
-  type IPTVCategory, 
-  type IPTVSeason, 
-  type IPTVEpisode
+  type IPTVCategory,
+  type IPTVSeason,
+  type IPTVEpisode,
+  type IPTVLiveStream
 } from '../types';
 
 class ApiService {
@@ -82,18 +83,18 @@ class ApiService {
   async getMovies(categoryId?: string): Promise<IPTVMovie[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const requestParams: any = {
+
+    const requestParams: Record<string, string | number> = {
       ...params,
       action: 'get_vod_streams',
     };
-    
+
     if (categoryId) {
       requestParams.category_id = categoryId;
     }
 
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
-      params: requestParams 
+    const response = await axios.get(`${apiUrl}/player_api.php`, {
+      params: requestParams
     });
     return response.data;
   }
@@ -101,18 +102,18 @@ class ApiService {
   async getSeries(categoryId?: string): Promise<IPTVSeries[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    
-    const requestParams: any = {
+
+    const requestParams: Record<string, string | number> = {
       ...params,
       action: 'get_series',
     };
-    
+
     if (categoryId) {
       requestParams.category_id = categoryId;
     }
 
-    const response = await axios.get(`${apiUrl}/player_api.php`, { 
-      params: requestParams 
+    const response = await axios.get(`${apiUrl}/player_api.php`, {
+      params: requestParams
     });
     // If the API returns an object, convert to array
     if (response.data && !Array.isArray(response.data)) {
@@ -121,12 +122,16 @@ class ApiService {
     return response.data;
   }
 
-  async getLiveStreams(categoryId?: string) {
+  async getLiveStreams(categoryId?: string): Promise<IPTVLiveStream[]> {
     const apiUrl = this.getApiUrl();
     const params = this.getApiParams();
-    const requestParams: any = { ...params, action: 'get_live_streams' };
+    const requestParams: Record<string, string | number> = { ...params, action: 'get_live_streams' };
     if (categoryId) requestParams.category_id = categoryId;
     const response = await axios.get(`${apiUrl}/player_api.php`, { params: requestParams });
+    // If the API returns an object, convert to array
+    if (response.data && !Array.isArray(response.data)) {
+      return Object.values(response.data);
+    }
     return response.data;
   }
 

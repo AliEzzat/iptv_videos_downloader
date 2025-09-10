@@ -26,10 +26,13 @@ interface AppStore extends AppState {
   loadSeries: (categoryId?: string) => Promise<void>;
   loadMovieCategories: () => Promise<void>;
   loadSeriesCategories: () => Promise<void>;
+  loadLiveCategories: () => Promise<void>;
+  loadLiveStreams: (categoryId?: string) => Promise<void>;
   
   // Selection actions
   selectMovie: (movie: IPTVMovie | null) => void;
   selectSeries: (series: IPTVSeries | null) => void;
+  selectLive: (live: IPTVLiveStream | null) => void;
   selectSeriesDetail: (seriesDetail: IPTVSeriesDetail | null) => void;
   selectSeason: (season: IPTVSeason | null) => void;
   selectEpisode: (episode: IPTVEpisode | null) => void;
@@ -40,6 +43,7 @@ interface AppStore extends AppState {
   // Search and filter actions
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (categoryId: string) => void;
+  setSelectedLiveCategory: (categoryId: string) => void;
   searchMovies: (query: string) => Promise<void>;
   searchSeries: (query: string) => Promise<void>;
   

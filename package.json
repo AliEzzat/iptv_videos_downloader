@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "webos:package": "vite build && ares-package --no-minify dist -o dist",
-    "webos:install": "ares-install --device LGTV dist/com.aliezzat.iptvvideosdownloader_1.0.0_all.ipk",
-    "webos:launch": "ares-launch --device LGTV com.aliezzat.iptvvideosdownloader"
+    "webos:install": "ares-install --device LGZayed dist/com.aliezzat.iptvvideosdownloader_1.0.0_all.ipk",
+    "webos:launch": "ares-launch --device LGZayed com.aliezzat.iptvvideosdownloader"
   },
   "dependencies": {
     "@types/react-lazy-load-image-component": "^1.6.4",

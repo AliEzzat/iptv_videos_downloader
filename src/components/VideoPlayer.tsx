@@ -52,7 +52,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    const effectiveExt = streamType === 'live' ? 'ts' : (containerExtension || 'mkv');
+    const effectiveExt = streamType === 'live' ? 'm3u8' : (containerExtension || 'mkv');
     const streamUrl = apiService.getStreamUrl(streamId, streamType, effectiveExt);
     if (!streamUrl) {
       setError('Stream URL not available');
@@ -62,8 +62,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // Set video attributes for better seeking performance
     video.preload = 'auto';
-    video.autoplay = true;
     video.playsInline = true;
+    video.muted = false; // Ensure not muted initially
+    
+    // For live streams, disable autoplay initially to prevent browser blocking
+    if (streamType === 'live') {
+      video.autoplay = false;
+    } else {
+      video.autoplay = true;
+    }
 
     if ((streamUrl.endsWith('.m3u8') || streamType === 'live') && Hls.isSupported()) {
       const hls = new Hls({
@@ -71,14 +78,55 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         enableWorker: true,
         backBufferLength: 0,
         lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        startLevel: -1,
+        autoStartLoad: true,
+        debug: false
       });
+      
       hlsRef.current = hls;
+      
+      // Add HLS event listeners for better debugging and handling
+      hls.on(Hls.Events.MANIFEST_LOADED, () => {
+        console.log('HLS: Manifest loaded');
+        setIsLoading(false);
+      });
+      
+      hls.on(Hls.Events.LEVEL_LOADED, () => {
+        console.log('HLS: Level loaded');
+        // For live streams, try to play after level is loaded
+        if (streamType === 'live') {
+          video.play().catch(error => {
+            console.warn('Autoplay failed, user interaction required:', error);
+            setIsLoading(false);
+          });
+        }
+      });
+      
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS Error:', data);
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log('Fatal network error encountered, trying to recover...');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log('Fatal media error encountered, trying to recover...');
+              hls.recoverMediaError();
+              break;
+            default:
+              console.log('Fatal error, cannot recover');
+              setError('Failed to load live stream');
+              setIsLoading(false);
+              break;
+          }
+        }
+      });
+      
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
-      return () => {
-        hlsRef.current = null;
-        hls.destroy();
-      };
     } else {
       video.src = streamUrl;
     }
@@ -151,6 +199,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (hideControlsTimer.current) {
         clearTimeout(hideControlsTimer.current);
+      }
+
+      // Clean up HLS instance if it exists
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
   }, [streamId, streamType, containerExtension]);
@@ -241,7 +295,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             video.currentTime = Math.min(video.duration || video.currentTime + 10, video.currentTime + 10);
           } else {
             // jump to live edge if possible
-            try { hlsRef.current?.seekToLivePosition?.(); } catch (_) {}
+            try { 
+              if (hlsRef.current && 'liveSyncPosition' in hlsRef.current) {
+                const video = videoRef.current;
+                if (video) {
+                  video.currentTime = video.duration || 0;
+                }
+              }
+            } catch (error) {
+              console.warn('Failed to seek to live position:', error);
+            }
           }
           break;
         case 'ArrowUp':
@@ -299,7 +362,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (!reader) throw new Error('Failed to get stream reader');
 
       let received = 0;
-      const chunks: Uint8Array[] = [];
+      const chunks: BlobPart[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
